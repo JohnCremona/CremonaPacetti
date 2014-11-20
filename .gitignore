@@ -1,0 +1,11 @@
+# use glob syntax.
+syntax: glob
+
+*~
+*.old
+
+# Mac cache files
+.DS_Store
+
+# Temporary swap files
+.*.swp
