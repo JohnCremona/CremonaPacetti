@@ -4,9 +4,7 @@
 \\ Description: Routine for computing curves of a given conductor
 \\
 \\
-\\ Original Author:  Ariel Pacetti
-\\			    apacetti@dm.uba.ar
-\\			    Universidad de Buenos Aires
+\\ Original Authors:  John Cremona  & Ariel Pacetti
 \\
 \\ Created:             12 Nov. 2014
 \\
@@ -169,109 +167,6 @@ CurvesWith2Torsion(N,flag,flag2)=
 	Set(V2T)
 };
 
-
-
-
-
-\\======================================================================
-\\ Curves with one 2-torsion point. If flag=1, use Szpiro's conjecture
-\\ routine, if not a "naive bound".
-
-CurvesWith2Torsion2(N,flag)=
-	{local(Disc,K,discbound,primedivisors,loopbound,indexbound,answer,Rootvalue,F,Acandidates,V2T,Isogs);
-	answer=[];
-	primedivisors=factor(N)[,1]~;
-	if(flag!=0, 
-	    discbound=Vec(factor(SzpiroBound(N))~),
-	    N=squarefree(2*N);
-	    discbound=[[2,if(N%2!=0,6,24)]];
-	    if(N%3==0,discbound=concat(discbound,[[3,18]]));
-	    for(l=1,length(primedivisors),if(primedivisors[l]%2!=0&&primedivisors[l]%3!=0,discbound=concat(discbound,[[primedivisors[l],12]]))));
-
-\\ Note that the discbound is a vector whose elements are [prime,exponent]
-
-	forvec(X=vector(length(primedivisors),n,[0,1]),
-	  if(X!=vector(length(X)),
-	    loopbound=discbound;
-	    Disc=prod(t=1,length(X),primedivisors[t]^X[t]);
-	    for(k=1,length(X),loopbound[k][2]-=X[k]);
-	    if(Disc%4!=1,loopbound[1][2]-=if(Disc%2==0,2,1));
-	    indexbound=loopbound;
-	    for(k=1,length(loopbound),loopbound[k][2]=(loopbound[k][2]\2));
-	    K=if(Disc%4==1,x^2-x+(1-Disc)/4,x^2-Disc);
-	    forvec(Y=vector(length(loopbound),k,[0,loopbound[k][2]]),
-		Acandidates=indexbound;
-		for(k=1,length(Acandidates),Acandidates[k][2]-=2*Y[k]);
-		F=prod(k=1,length(primedivisors),primedivisors[k]^(Y[k]));
-		Rootvalue=PossibleRoot2(Minimal(K,F),Acandidates);
-		for(l=1,length(Rootvalue),answer=concat(answer,(x+Rootvalue[l])*Minimal(K,F))))));
-	forvec(X=vector(length(primedivisors),n,[0,1]),
-	    loopbound=discbound;
-	    Disc=-prod(t=1,length(X),primedivisors[t]^X[t]);
-	    for(k=1,length(X),loopbound[k][2]-=X[k]);
-	    if(Disc%4!=1,loopbound[1][2]-=if(Disc%2==0,2,1));
-	    indexbound=loopbound;
-	    for(k=1,length(loopbound),loopbound[k][2]=(loopbound[k][2]\2));
-	    K=if(Disc%4==1,x^2-x+(1-Disc)/4,x^2-Disc);
-	    forvec(Y=vector(length(loopbound),k,[0,loopbound[k][2]]),
-		Acandidates=indexbound;
-		for(k=1,length(Acandidates),Acandidates[k][2]-=2*Y[k]);
-		F=prod(k=1,length(primedivisors),primedivisors[k]^(Y[k]));
-		Rootvalue=PossibleRoot2(Minimal(K,F),Acandidates);
-		for(l=1,length(Rootvalue),answer=concat(answer,(x+Rootvalue[l])*Minimal(K,F)))));
-
-	answer=vector(length(answer),k,Ell(answer[k])); print(length(answer));
-	answer=Set(vector(length(answer),k,vector(5,j,answer[k][j])));
-	for(k=1,length(primedivisors),primedivisors[k]*=kronecker(-1,primedivisors[k]));
-	answer=ComputeTwists(answer,primedivisors);
-	V2T=answer; 
-	for(k=1,length(answer),Isogs=listisog(answer[k]);
-	    V2T=concat(V2T,vector(length(Isogs),i,Isogs[i][3])));
-	Set(V2T)
-};
-
-\\======================================================================
-\\ Stupid routine to compute the minimal poly of a*x given that of x
-
-Minimal(pol,a)=
-	{local(var);
-	var=variable(pol);
-	subst(pol,var,var/a)*a^(poldegree(pol))
-};
-
-
-
-\\======================================================================
-\\ Stupid routine to compute rational roots of a polynomial
-
-polrationalroots(P)=
-	{local(Fact,ans);
-	ans=[];
-	Fact=factor(P);
-	for(k=1,matsize(Fact)[1],if(poldegree(Fact[k,1])==1,ans=concat(ans,-subst(Fact[k,1],x,0))));
-	ans
-};
-
-\\======================================================================
-\\ Give the possible discriminants. We can ask gcd(a,b,c)=1, so we
-\\ check this property.
-
-PossibleRoot2(pol,loopbound)=
-	{local(Div,Values,d,Gcd,End);
-	Gcd=gcd(polcoeff(pol,1),polcoeff(pol,0));
-	End=1;
-	while(End<=length(loopbound),if(Gcd%loopbound[End][1],loopbound=vectorkill(loopbound,End),End++));
-	
-	Values=[]; d=length(loopbound);
-	forvec(X=vector(d,k,[0,loopbound[k][2]]),
-		Div=prod(k=1,length(loopbound),loopbound[k][1]^X[k]);
-		Values=concat(Values,polrationalroots(x^2-x*polcoeff(pol,1)+polcoeff(pol,0)-Div));
-		Values=concat(Values,polrationalroots(x^2-x*polcoeff(pol,1)+polcoeff(pol,0)+Div)));
-	Set(Values)
-};
-
-
-
 \\======================================================================
 \\ Routines for no 2-torsion curves
 
@@ -290,7 +185,7 @@ CurvesWithS3Image(N,flag)=
 	curves=[];
 	for(k=1,length(fields),
 		K=nfinit(fields[k]);
-		curves=concat(curves,CurvesBigImage(K,Ninfty)));
+		curves=concat(curves,CurvesBigImage(K,N,Ninfty)));
 	vector(length(curves),k,Ell(curves[k]))
 };
 
@@ -299,12 +194,13 @@ CurvesWithS3Image(N,flag)=
 \\ elliptic curves whose defining polynomial has discriminant less than
 \\ that bound.
 
-CurvesBigImage(K,Ninfty)=
+CurvesBigImage(K,N,Ninfty)=
 	{local(answer,Orders);
 	answer=[]; 
 	Orders=CubicFieldSuborders(K,Ninfty); 
 	for(k=1,length(Orders),
-	    answer=concat(answer,if(sign(K.disc)==1,CubicOrderGenerators1(K,Orders[k]),CubicOrderGenerators2(K,Orders[k]))));
+	    if(Orders[k][4]%if(N%2==0,N/2,N)==0,
+	        answer=concat(answer,if(sign(K.disc)==1,CubicOrderGenerators1(K,Orders[k]),CubicOrderGenerators2(K,Orders[k])))));
 	answer
 };
 
@@ -361,7 +257,7 @@ CurvesWithC3Image(N,flag)=
 	curves=[];
 	for(k=1,length(fields),
 		K=nfinit(fields[k]);
-		curves=concat(curves,CurvesBigImage(K,Ninfty)));
+		curves=concat(curves,CurvesBigImage(K,N,Ninfty)));
 	vector(length(curves),k,Ell(curves[k]))
 };
 
