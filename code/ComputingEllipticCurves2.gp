@@ -1,6 +1,6 @@
 \\ ---------------  GP code  ---------------------------------------
 \\
-\\ Time-stamp: <2014-11-22 15:11:08 apacetti>
+\\ Time-stamp: <2014-11-22 15:55:30 apacetti>
 \\ Description: Routine for computing curves of a given conductor
 \\
 \\
@@ -406,7 +406,7 @@ ComputeCurves(N,flag,flag2)=
 	for(k=1,length(curves2T),Elred=ellglobalred(ellinit(curves2T[k]));
 	    if(flag2==0,
 	        if(Elred[1]%2==N%2 && Elred[1]%N==0,result=concat(result,[[Elred[1],curves2T[k]]])),
-		result=concat(result,[[Elred[1],curves2T[k]]])));
+		if(Elred[1]%2==N%2,result=concat(result,[[Elred[1],curves2T[k]]]))));
 
 	curvesC3=CurvesWithC3Image(N,1,flag2);
 	curvesC3=ComputeTwists(curvesC3,Fact);
@@ -416,7 +416,7 @@ ComputeCurves(N,flag,flag2)=
 	        VC3=concat(VC3,vector(length(Isogs),i,Isogs[i][3]))));
 	VC3=Set(VC3);
 	for(k=1,length(VC3),Elred=ellglobalred(ellinit(VC3[k]));
-		result=concat(result,[[Elred[1],VC3[k]]]));
+		if(Elred[1]%2==N%2,result=concat(result,[[Elred[1],VC3[k]]])));
 	
 	curvesS3=CurvesWithS3Image(N,1,flag2);
 	curvesS3=ComputeTwists(curvesS3,Fact);
@@ -426,7 +426,7 @@ ComputeCurves(N,flag,flag2)=
 	        VS3=concat(VS3,vector(length(Isogs),i,Isogs[i][3]))));
 	VS3=Set(VS3);
 	for(k=1,length(VS3),Elred=ellglobalred(ellinit(VS3[k]));
-		result=concat(result,[[Elred[1],VS3[k]]]));
+		if(Elred[1]%2==N%2,result=concat(result,[[Elred[1],VS3[k]]])));
 	result
 };
 
