@@ -1,6 +1,6 @@
 \\ ---------------  GP code  ---------------------------------------
 \\
-\\ Time-stamp: <2014-11-20 09:52:35 jec>
+\\ Time-stamp: <2014-11-22 15:11:08 apacetti>
 \\ Description: Routine for computing curves of a given conductor
 \\
 \\
@@ -172,9 +172,10 @@ CurvesWith2Torsion(N,flag,flag2)=
 
 \\======================================================================
 \\ Compute the cases of big image (S3). Flag is non-zero uses Szpiro's
-\\ conjecture.
+\\ conjecture. The second flag is to compute curves whose conductor is
+\\ only divisible by N (default, flag=0) or not.
 
-CurvesWithS3Image(N,flag)=
+CurvesWithS3Image(N,flag,flag2)=
 	{local(fields,curves,K,Ninfty);
 	if(issquarefree(N),,N=squarefree(N));
 	if(flag!=0,
@@ -185,22 +186,25 @@ CurvesWithS3Image(N,flag)=
 	curves=[];
 	for(k=1,length(fields),
 		K=nfinit(fields[k]);
-		curves=concat(curves,CurvesBigImage(K,N,Ninfty)));
+		curves=concat(curves,CurvesBigImage(K,N,Ninfty,flag2)));
 	vector(length(curves),k,Ell(curves[k]))
 };
 
 \\======================================================================
 \\ Compute given a cubic field, and the discriminant bound, the
-\\ elliptic curves whose defining polynomial has discriminant less than
-\\ that bound.
+\\ elliptic curves whose defining polynomial has discriminant less
+\\ than that bound. Flag (if zero) computes only the curves whose
+\\ conductor is divisible by N.
 
-CurvesBigImage(K,N,Ninfty)=
+CurvesBigImage(K,N,Ninfty,flag)=
 	{local(answer,Orders);
 	answer=[]; 
 	Orders=CubicFieldSuborders(K,Ninfty); 
 	for(k=1,length(Orders),
-	    if(Orders[k][4]%if(N%2==0,N/2,N)==0,
-	        answer=concat(answer,if(sign(K.disc)==1,CubicOrderGenerators1(K,Orders[k]),CubicOrderGenerators2(K,Orders[k])))));
+	    if(flag==0,
+	        if(Orders[k][4]%if(N%2==0,N/2,N)==0,
+	        answer=concat(answer,if(sign(K.disc)==1,CubicOrderGenerators1(K,Orders[k]),CubicOrderGenerators2(K,Orders[k])))),
+		answer=concat(answer,if(sign(K.disc)==1,CubicOrderGenerators1(K,Orders[k]),CubicOrderGenerators2(K,Orders[k])))));
 	answer
 };
 
@@ -244,9 +248,10 @@ CubicOrderGenerators2(K,Om)=
 };
 
 \\======================================================================
-\\ Compute curves with 3-cyclic image. Flag if non-zero uses Szpiro's bound
+\\ Compute curves with 3-cyclic image. Flag if non-zero uses Szpiro's
+\\ bound, and same as S3 case.
 
-CurvesWithC3Image(N,flag)=
+CurvesWithC3Image(N,flag,flag2)=
 	{local(fields,curves,K,Ninfty);
 	if(issquarefree(N),,N=squarefree(N));
 	if(flag!=0,
@@ -257,7 +262,7 @@ CurvesWithC3Image(N,flag)=
 	curves=[];
 	for(k=1,length(fields),
 		K=nfinit(fields[k]);
-		curves=concat(curves,CurvesBigImage(K,N,Ninfty)));
+		curves=concat(curves,CurvesBigImage(K,N,Ninfty,flag2)));
 	vector(length(curves),k,Ell(curves[k]))
 };
 
@@ -378,51 +383,51 @@ vectorfind(v,elmnt)=
 };
 
 
-
 \\======================================================================
-\\ Algorithm to compute all curves of a given N. The flag is cero,
-\\uses a naive bound for the curves with 2-torsion. If non-cero tries
-\\ to use Szpiro's bound (not recommended so far). Second flag to
-\\ avoid computing twists (if non-zero).
+\\ Algorithm to compute all curves of a given N. The input is the
+\\ conductor (might be square-free or not) and two flags. In all
+\\ cases, it uses Szpiro's bound with Constant=1 and exponent 6.1. The
+\\ flags usage is as follows:
+\\ The first flag determines whether to compute isogenies or not. By
+\\ default (=0) it does. Note that it also computes the isogenies in
+\\ the cases of curves with no 2-torsion (which theoretically is not
+\\ needed, but trying to avoid the finite cases where Szpiro's bound
+\\ might not work)
+\\ The second flag, if zero (default) computes ONLY curves whose
+\\ conductor is supported in all primes of N, so if N=11*5, the curves
+\\ with conductor 11 will be omited.
 
 ComputeCurves(N,flag,flag2)=
-	{local(V2T,VC3,VS3,curves2T,curvesC3,curvesS3,Fact,Isogs,aux,Elist,E,EN);
-	N=squarefree(N);
+	{local(V2T,VC3,VS3,curves2T,curvesC3,curvesS3,Fact,Isogs,Elist,E,EN,Elred,result);
+	N=squarefree(N); result=[];
 	Fact=factor(2*N)[,1]~;
 	for(k=1,length(Fact),Fact[k]*=kronecker(-1,Fact[k]));
-\\	gettime();	
-	curves2T=CurvesWith2Torsion(N,flag,flag2);\\print(1," ",gettime());
+	curves2T=CurvesWith2Torsion(N,1,flag);
+	for(k=1,length(curves2T),Elred=ellglobalred(ellinit(curves2T[k]));
+	    if(flag2==0,
+	        if(Elred[1]%2==N%2 && Elred[1]%N==0,result=concat(result,[[Elred[1],curves2T[k]]])),
+		result=concat(result,[[Elred[1],curves2T[k]]])));
 
-	curvesC3=CurvesWithC3Image(N,1);\\print(2," ",gettime());
+	curvesC3=CurvesWithC3Image(N,1,flag2);
 	curvesC3=ComputeTwists(curvesC3,Fact);
 	VC3=curvesC3;
-	if(flag2==0,
+	if(flag==0,
 	    for(k=1,length(curvesC3),Isogs=listisog(curvesC3[k]);
 	        VC3=concat(VC3,vector(length(Isogs),i,Isogs[i][3]))));
 	VC3=Set(VC3);
-
-	curvesS3=CurvesWithS3Image(N,1);
+	for(k=1,length(VC3),Elred=ellglobalred(ellinit(VC3[k]));
+		result=concat(result,[[Elred[1],VC3[k]]]));
+	
+	curvesS3=CurvesWithS3Image(N,1,flag2);
 	curvesS3=ComputeTwists(curvesS3,Fact);
 	VS3=curvesS3;
-	if(flag2==0,
+	if(flag==0,
 	    for(k=1,length(curvesS3),Isogs=listisog(curvesS3[k]);
 	        VS3=concat(VS3,vector(length(Isogs),i,Isogs[i][3]))));
 	VS3=Set(VS3);
-	Elist=concat(concat(curves2T,VC3),VS3); aux=[];
-	for(i=1,length(Elist),E=Elist[i];EN=ellglobalred(ellinit(E))[1];
-	    if(N%2==EN%2&&EN%N==0,aux=concat(aux,[[EN,E]])));
-\\	if(N%2!=0,
-\\	    aux=length(curves2T);
-\\	    for(k=1,aux,if(ellglobalred(ellinit(curves2T[aux+1-k]))[1]%2==0,curves2T=vectorkill(curves2T),aux-k+1));
-\\	    aux=length(VC3);
-\\	    for(k=1,aux,if(ellglobalred(ellinit(VC3[aux+1-k]))[1]%2==0,VC3=vectorkill(VC3),aux-k+1));
-\\	    aux=length(VS3);
-\\	    for(k=1,aux,if(ellglobalred(ellinit(VS3[aux+1-k]))[1]%2==0,VS3=vectorkill(VS3,aux-k+1))));
-\\	print();
-\\	print("Curves with 2-torsion  ",length(curves2T));	
-\\	print("Curves without 2-torsion  ",length(VC3)+length(VS3));
-\\	concat(concat(curves2T,VC3),VS3)
-	aux
+	for(k=1,length(VS3),Elred=ellglobalred(ellinit(VS3[k]));
+		result=concat(result,[[Elred[1],VS3[k]]]));
+	result
 };
 
 \\======================================================================
