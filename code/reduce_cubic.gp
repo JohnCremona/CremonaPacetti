@@ -149,7 +149,7 @@ shift_step(abcd) =
            {my(f,x,a);
            f = Pol(abcd);
            x = variable(f);
-           a = (bezout(2*h0x(abcd,x),f)[1] * h1x(abcd,x)) % f;
+           a = (bezout(-2*h0x(abcd,x),f)[1] * h1x(abcd,x)) % f;
            round(subst(a,x,real_root(abcd)));
 };
 
