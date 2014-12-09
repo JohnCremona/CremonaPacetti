@@ -146,10 +146,11 @@ real_root(abcd) =
 };
 
 shift_step(abcd) =
-           {my(alpha);
-           alpha=real_root(abcd);
-           k = round(-h1x(abcd,alpha)/(2*h0x(abcd,alpha)));
-           k
+           {my(f,x,a);
+           f = Pol(abcd);
+           x = variable(f);
+           a = (bezout(2*h0x(abcd,x),f)[1] * h1x(abcd,x)) % f;
+           round(subst(a,x,real_root(abcd)));
 };
 
 reduce_negative_cubic(f) =
