@@ -114,6 +114,7 @@ C4(abcd) =
          27*d*c3*a2 + (27*d2*b3 - 54*d*c2*b2 + 9*c4*b)*a + (9*d*c*b4 - 2*c3*b3)
 };
 
+test_formulae() = {
 print1("C1 formula: ");
 if(C1([a,b,c,d])==xC1([a,b,c,d]), print("OK"), print("bad"));
 print1("C2 formula: ");
@@ -122,6 +123,7 @@ print1("C3 formula: ");
 if(C3([a,b,c,d])==xC3([a,b,c,d]), print("OK"), print("bad"));
 print1("C4 formula: ");
 if(C4([a,b,c,d])*8==xC4([a,b,c,d]), print("OK"), print("bad"));
+}
 
 invert(abcd) = [-abcd[4],abcd[3],-abcd[2],abcd[1]];
 negate(abcd) = [-abcd[1],abcd[2],-abcd[3],abcd[4]];
