@@ -21,7 +21,7 @@ def compute_curves(N,flag1=False,flag2=False):
 
     """
     stacksize = 1024000000
-    f = 'tempfile'+str(getpid())
+    f = 'tempfile-'+str(N)+'-'+str(getpid())
     comm = "echo 'ComputeCurves(%s,%s,%s)' | %s -q -s %s %s > %s" % (N,int(flag1),int(flag2),GP,stacksize,"ComputingEllipticCurves.gp",f)
     #print("Command line = %s" % comm)
     os.system(comm)
