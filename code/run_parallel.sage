@@ -20,9 +20,8 @@ def compute_curves(N,flag1=False,flag2=False):
     A list of pairs [N,[a1,a2,a3,a4,a6]] = [conductor, a-invariants]
 
     """
-    stacksize = 1024000000
     f = 'tempfile-'+str(N)+'-'+str(getpid())
-    comm = "echo 'ComputeCurves(%s,%s,%s)' | %s -q -s %s %s > %s" % (N,int(flag1),int(flag2),GP,stacksize,"ComputingEllipticCurves.gp",f)
+    comm = "echo 'ComputeCurves(%s,%s,%s)' | %s -q %s > %s" % (N,int(flag1),int(flag2),GP,"ComputingEllipticCurves.gp",f)
     #print("Command line = %s" % comm)
     os.system(comm)
     result = file(f).read()
@@ -32,9 +31,9 @@ def compute_curves(N,flag1=False,flag2=False):
     result.sort()
     return result
 
-@parallel(10)
+@parallel(30)
 def compute_curves_parallel(params):
-    #print("Starting parallel version with N=%s" % params[0])
+    print("Starting N=%s" % params[0])
     return compute_curves(*params)
 
 def compute_curves_multi(Nlist,flag1=False,flag2=False):
