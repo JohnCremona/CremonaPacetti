@@ -41,7 +41,7 @@ def compute_curves_parallel(params):
     print("Starting N=%s" % params[0])
     return compute_curves(*params)
 
-def compute_curves_multi(Nlist,flag1=False,flag2=False):
+def compute_curves_multi(Nlist,flag2isogenies=False,flagconductorsupport=False):
     results = compute_curves_parallel([[N,flag2isogenies,flagconductorsupport] for N in Nlist])
     for r in results:
         yield r[1]
