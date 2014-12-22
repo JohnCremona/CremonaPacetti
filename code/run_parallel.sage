@@ -4,18 +4,21 @@ GP = os.path.join(PATH_TO_GP,"gp")
 GP_FLAGS = "--default parisizemax=10000M -q"
 GP_SCRIPT = "ComputingEllipticCurves2.gp"
 
-def compute_curves(N,flag1=False,flag2=False):
+def compute_curves(N,flag2isogenies=False,flagconductorsupport=False):
     """Compute elliptic curves with good reduction outside support of N.
 
     INPUT:
 
     - N (integer) -- product of primes at which bad reduction is allowed
 
-    - flag1 (boolean, default False) -- if False, use naive bound in
-      2-torsion case, else use Szpiro's bound (not currently
-      recommended)
+    - flag2isogenies (boolean, default False) -- if False, computes curves including 
+      two-isogenies. If true avoids computing any kind of isogenies.
 
-    - flag2 (boolean, default False) -- if True, do not compute twists
+    - flagconductorsupport (boolean, default False) -- if False computes ONLY the curves
+      whose conductors are supported at ALL primes dividing N and discards
+      the intermediate computations. If True, computes all curves whose 
+      conductor is supported at the set of primes dividing N. Note that 
+      the default option is faster since it avoids solving many thue equations.
 
     OUTPUT:
 
@@ -23,7 +26,7 @@ def compute_curves(N,flag1=False,flag2=False):
 
     """
     tempfile = 'tempfile-'+str(N)+'-'+str(getpid())
-    comm = "echo 'ComputeCurves(%s,%s,%s)' | %s %s %s > %s" % (N,int(flag1),int(flag2),GP,GP_FLAGS,GP_SCRIPT,tempfile)
+    comm = "echo 'ComputeCurves(%s,%s,%s)' | %s %s %s > %s" % (N,int(flag2isogenies),int(flagconductorsupport),GP,GP_FLAGS,GP_SCRIPT,tempfile)
     #print("Command line = %s" % comm)
     os.system(comm)
     result = file(tempfile).read()
@@ -38,8 +41,8 @@ def compute_curves_parallel(params):
     print("Starting N=%s" % params[0])
     return compute_curves(*params)
 
-def compute_curves_multi(Nlist,flag1=False,flag2=False):
-    results = compute_curves_parallel([[N,flag1,flag2] for N in Nlist])
+def compute_curves_multi(Nlist,flag2isogenies=False,flagconductorsupport=False):
+    results = compute_curves_parallel([[N,flag2isogenies,flagconductorsupport] for N in Nlist])
     for r in results:
         yield r[1]
 
