@@ -141,17 +141,17 @@ CurvesWith2TorsionofDiscriminant(N)=
 
 \\======================================================================
 \\ First flag is to use Szpiro or not. Second flag is to compute
-\\ twists or not.
+\\ 2-isogenies or not.
 
 
-CurvesWith2Torsion(N,flag,flag2)=
+CurvesWith2Torsion(N,flagSzpiro,flag2isogenies)=
 	{local(discbound,primedivisors,answer,V2T);
 	answer=[];
-	primedivisors=factor(N)[,1]~;
-	if(flag!=0, 
+	primedivisors=factor(2*N)[,1]~;
+	if(flagSzpiro!=0, 
 	    discbound=Vec(factor(SzpiroBound(N))~),
 	    N=squarefree(2*N);
-	    discbound=[[2,if(N%2!=0,6,24)]];
+	    discbound=[[2,if(N%2!=0,8,24)]];
 	    if(N%3==0,discbound=concat(discbound,[[3,18]]));
 	    for(l=1,length(primedivisors),if(primedivisors[l]%2!=0&&primedivisors[l]%3!=0,discbound=concat(discbound,[[primedivisors[l],12]]))));
         forvec(X=vector(length(discbound),k,[0,discbound[k][2]]),
@@ -161,7 +161,7 @@ CurvesWith2Torsion(N,flag,flag2)=
 	answer=vector(length(answer),k,Ell(answer[k]));
 	answer=ComputeTwists(answer,primedivisors);
 	V2T=answer; 
-	if(flag2==0,
+	if(flag2isogenies==0,
 	    for(k=1,length(answer),
 	        V2T=concat(V2T,two_power_isogs(answer[k]))));
 	Set(V2T)
@@ -437,7 +437,7 @@ ComputeCurves(N,flag,flag2)=
 
 TestTable(N,Curves,flag)=
 	{local(S,aux,Vap,fact,Ninfty,A,Missing);
-	if(Curves,Curves=vector(length(Curves),k,ellinit(Curves[k])),Curves=ComputeCurves(N));
+	if(Curves,Curves=vector(length(Curves),k,ellinit(Curves[k][2])),aux=ComputeCurves(N);Curves=vector(length(aux),k,ellinit(aux[k][2])));
 	Missing=[]; S=[]; aux=3;
 	while(length(S)<30,aux=nextprime(aux+2);
 		if(N%aux!=0,S=concat(S,aux)));
