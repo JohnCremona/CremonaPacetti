@@ -144,13 +144,12 @@ CurvesWith2TorsionofDiscriminant(N)=
 \\ 2-isogenies or not.
 
 
-CurvesWith2Torsion(N,flagSzpiro,flag2isogenies)=
-	{local(discbound,primedivisors,answer,V2T);
-	answer=[];
+CurvesWith2Torsion(N,flagSzpiro,flag2isogenies,flagConductorsupport)=
+	{local(discbound,primedivisors,answer,V2T,Elred,M);
+	answer=[];M=squarefree(N);
 	primedivisors=factor(2*N)[,1]~;
 	if(flagSzpiro!=0, 
 	    discbound=Vec(factor(SzpiroBound(N))~),
-	    N=squarefree(2*N);
 	    discbound=[[2,if(N%2!=0,8,24)]];
 	    if(N%3==0,discbound=concat(discbound,[[3,18]]));
 	    for(l=1,length(primedivisors),if(primedivisors[l]%2!=0&&primedivisors[l]%3!=0,discbound=concat(discbound,[[primedivisors[l],12]]))));
@@ -164,8 +163,12 @@ CurvesWith2Torsion(N,flagSzpiro,flag2isogenies)=
 	if(flag2isogenies==0,
 	    for(k=1,length(answer),
 	        V2T=concat(V2T,two_power_isogs(answer[k]))));
-	Set(V2T)
-};
+	V2T=Set(V2T); answer=[];
+	for(k=1,length(V2T),Elred=ellglobalred(ellinit(V2T[k]));
+	    if(flagConductorsupport==0,
+		if(Elred[1]%2==N%2 && Elred[1]%M==0,answer=concat(answer,[[Elred[1],V2T[k]]])),answer=concat(answer,[[Elred[1],V2T[k]]])));
+	answer
+}
 
 \\======================================================================
 \\ Routines for no 2-torsion curves
@@ -397,31 +400,26 @@ vectorfind(v,elmnt)=
 \\ conductor is supported in all primes of N, so if N=11*5, the curves
 \\ with conductor 11 will be omited.
 
-ComputeCurves(N,flag,flag2)=
-	{local(V2T,VC3,VS3,curves2T,curvesC3,curvesS3,Fact,Isogs,Elist,E,EN,Elred,result);
-	N=squarefree(N); result=[];
+ComputeCurves(N,flagIsogenies,flagConductorsupport)=
+	{local(V2T,VC3,VS3,curvesC3,curvesS3,Fact,Isogs,Elist,E,EN,Elred,result);
+	N=squarefree(N); 
 	Fact=factor(2*N)[,1]~;
 	for(k=1,length(Fact),Fact[k]*=kronecker(-1,Fact[k]));
-	curves2T=CurvesWith2Torsion(N,1,flag);
-	for(k=1,length(curves2T),Elred=ellglobalred(ellinit(curves2T[k]));
-	    if(flag2==0,
-	        if(Elred[1]%2==N%2 && Elred[1]%N==0,result=concat(result,[[Elred[1],curves2T[k]]])),
-		if(Elred[1]%2==N%2,result=concat(result,[[Elred[1],curves2T[k]]]))));
-
-	curvesC3=CurvesWithC3Image(N,1,flag2);
+	result=CurvesWith2Torsion(N,1,flagIsogenies,flagConductorsupport);
+	curvesC3=CurvesWithC3Image(N,1,flagConductorsupport);
 	curvesC3=ComputeTwists(curvesC3,Fact);
 	VC3=curvesC3;
-	if(flag==0,
+	if(flagIsogenies==0,
 	    for(k=1,length(curvesC3),Isogs=listisog(curvesC3[k]);
 	        VC3=concat(VC3,vector(length(Isogs),i,Isogs[i][3]))));
 	VC3=Set(VC3);
 	for(k=1,length(VC3),Elred=ellglobalred(ellinit(VC3[k]));
 		if(Elred[1]%2==N%2,result=concat(result,[[Elred[1],VC3[k]]])));
 	
-	curvesS3=CurvesWithS3Image(N,1,flag2);
+	curvesS3=CurvesWithS3Image(N,1,flagConductorsupport);
 	curvesS3=ComputeTwists(curvesS3,Fact);
 	VS3=curvesS3;
-	if(flag==0,
+	if(flagIsogenies==0,
 	    for(k=1,length(curvesS3),Isogs=listisog(curvesS3[k]);
 	        VS3=concat(VS3,vector(length(Isogs),i,Isogs[i][3]))));
 	VS3=Set(VS3);
