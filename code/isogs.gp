@@ -6,18 +6,19 @@ verb=0;
 \\ Roots of a polynomial!  (not elliptic curve specific)
 \\
 \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-{
+
 polratroots(pol)=
-local(fx,ans);
+{
+local(fx,ans,fxj);
 fx=factor(pol); ans=[];
 for(j=1,#(fx~),if(poldegree(fxj=fx[j,1])==1,
 ans=concat(ans,[-polcoeff(fxj,0)/polcoeff(fxj,1)])));
 ans;
 }
 
+two_torsion(e)= 
 {
-two_torsion(e)= local(x,ee,x2s,nx2s);
-kill(x);
+local(x,ee,x2s,nx2s);
 ee=ellinit(e);
 x2s=polratroots(x^3+ee.b2*x^2+8*ee.b4*x+16*ee.b6);
 nx2s=length(x2s);
@@ -29,9 +30,9 @@ if(verb,print("sorted x2s = ",x2s));
 vector(nx2s,j,[x2s[j]/4,(-ee.a1*x2s[j]-4*ee.a3)/8]);
 }
 
+two_torsion_check(N,cl,cu,e)= 
 {
-two_torsion_check(N,cl,cu,e)= local(x,ee,x2s,nx2s);
-kill(x);
+local(x,ee,x2s,nx2s);
 ee=ellinit(e);
 x2s=polratroots(x^3+ee.b2*x^2+8*ee.b4*x+16*ee.b6);
 nx2s=length(x2s);
@@ -48,8 +49,9 @@ vector(nx2s,j,[x2s[j]/4,(-ee.a1*x2s[j]-4*ee.a3)/8]);
 \\what it is doing.  If it gives the error message "precision loss in
 \\truncation" (sent to sterr) try doubling the precision.  
 
+two_isogs(e)= 
 {
-two_isogs(e)= local(ee,tt,ans,T,xj,t,e2);
+local(ee,tt,ans,T,xj,t,e2);
 ee=ellinit(e,1);
 tt=two_torsion(e);
 ans=vector(length(tt),j,0);
@@ -66,9 +68,9 @@ ans
 \\three_torsion_x(e) returns a list of 0, 1 or 2 x-coords (scaled by 3
 \\ to be integral for compatibility with C++ program) which are
 \\ roots of the 3-division polynomial 
-{
   three_torsion_x(e) =
-  x3s=polratroots(x^4+e.b2*x^3+9*e.b4*x^2+27*e.b6*x+27*e.b8);
+{local(x3s,x); 
+ x3s=polratroots(x^4+e.b2*x^3+9*e.b4*x^2+27*e.b6*x+27*e.b8);
 \\ standardise order
    if(verb,print("unsorted x3s = ",x3s));
    if(length(x3s)>1,x3s=vecextract(x3s,vecsort(x3s,,1)));
@@ -81,8 +83,9 @@ ans
 \\what it is doing.  If it gives the error message "precision loss in
 \\truncation" (sent to sterr) try doubling the precision.  
 
+three_isogs(e)= 
 {
-three_isogs(e)= local(ee,xt3,ans,x3,t,w,e3);
+local(ee,xt3,ans,x3,t,w,e3);
 if(verb,print("In three_isogs with e = ",e));
 ee=ellinit(e,1);
 xt3=three_torsion_x(ee);
@@ -108,7 +111,8 @@ ans
 
 \\ This works for all prime l but two_isogs is recommended for l=2
 
-{lisogs(e,ell)=
+lisogs(e,ell)=
+{
 local(e1,ee,num,ans,w1,w2,tau,a1,a2,a3,a4,a6,b2,b4,b6,c4,c6,cond,ltype,nsubs,ilim,ell2,ell3,ell4,ell6,t,w,z,p,xi,yi,ti,ui,rad4,rad6,ad4,ad6,ee2,gr,cond2,e2);
 if(ell==2,return(two_isogs(e)));
 if(ell==3,return(three_isogs(e)));
@@ -162,7 +166,9 @@ ans
 
 div(a,b)=b%a==0
 
-{getelllist(ee,cond)=local(ans,jay,num);
+getelllist(ee,cond)=
+{
+local(ans,jay,num);
 ans=vector(12,j,0);
 ans[1]=2;ans[2]=3;ans[3]=5;ans[4]=7;num=4;
 if(issquarefree(cond),ans=vector(4,j,ans[j]);ans,jay=ee[13];num=5;ans[5]=13;
@@ -176,8 +182,10 @@ if(jay==-640320^3,num=num+1;ans[num]=163,);
 ans=vector(num,j,ans[j]);ans)
 }
  
+
+isin(elem,list,n)=
 {
-isin(elem,list,n)=local(ans,j);
+local(ans,j);
 ans=0;j=1;
 while((j<=n)&&(ans==0),ans=(elem==list[j]);j=j+1);
 ans
@@ -192,7 +200,9 @@ for(j=1,n,if(elem==list[j],return(j)));0;
 \\allisog(e) returns a list of lists, each of the form [l,elist],
 \\where elist is a nonempty list of curves l-isogenous to e
 
-{allisog(e)=local(ee,cond,list,nell,num,ans,le);
+allisog(e)=
+{
+local(ee,cond,list,nell,num,ans,le);
 ee=ellinit(e);
 cond=ellglobalred(ee)[1];list=getelllist(ee,cond);nell=length(list);
 \\print("list = ",list);
@@ -204,7 +214,9 @@ if(length(le)>0,num=num+1;ans[num]=[list[j],le],));vector(num,j,ans[j])
 \\allisog1(e) returns a single list of curves l-isogenous to e
 \\for some prime l; no info on the l values is assumed or returned.
 
-{allisog1(e)=local(ee,cond,list,nell,num,ans,le);
+allisog1(e)=
+{
+local(ee,cond,list,nell,num,ans,le);
 ee=ellinit(e);
 cond=ellglobalred(ee)[1];list=getelllist(ee,cond);nell=length(list);
 num=0;ans=vector(26,j,0);
@@ -219,7 +231,9 @@ vector(num,j,ans[j])
 \\(3)a list of the corresponding values of l.
 \\no info on the l values is assumed.
 
-{allisog1l(e,ee)=local(cond,list,nell,num,ans,le,list1,nell1,list2);
+allisog1l(e,ee)=
+{
+local(cond,list,nell,num,ans,le,list1,nell1,list2);
 ee=ellinit(e);
 cond=ellglobalred(ee)[1];list=getelllist(ee,cond);nell=length(list);
 list2=vector(26,j,0);
@@ -235,7 +249,9 @@ for(k=1,length(le),num=num+1;ans[num]=le[k];list2[num]=list[j]));
 \\(2)a list of the corresponding values of l
 \\use when you already know the list of l which occur.
 
-{allisog2(e,list)=local(ee,cond,nell,num,ans,le,lans);
+allisog2(e,list)=
+{
+local(ee,cond,nell,num,ans,le,lans);
 ee=ellinit(e);
 nell=length(list);num=0;ans=vector(26,j,0);lans=vector(26,j,0);
 for(j=1,nell,le=lisogs(ee,list[j]);
@@ -249,7 +265,9 @@ for(k=1,length(le),num=num+1;ans[num]=le[k];lans[num]=list[j]));
 \\curves isogenous to the original, with the original first.  If v=1
 \\it also displays the curves as it finds them for prettier output.
 
-{listisog(e,v)=local(ee,cond,ans,num,t,list,inum,e1);
+listisog(e,v)=
+{
+local(ee,cond,ans,num,t,list,inum,e1);
 ee=ellinit(e);
 cond=ellglobalred(ee)[1];ans=vector(26,j,0);num=1;ans[1]=e;
 if(v,print("Conductor = ",cond),);
@@ -270,7 +288,10 @@ ans=vector(num,j,[fromlist[j],fromlistl[j],ans[j]]);ans
 \\testlist(elist) takes a list of curves and checks that it is closed
 \\under isogeny.
 
-{testlist(cond,elist)=n=length(elist);ans=1;
+testlist(cond,elist)=
+{
+local(n,ans,e,t);
+n=length(elist);ans=1;
 for(j=1,n,e=elist[j];t=allisog1(e);
 for(k=1,length(t),if(isin(t[k],elist,n),,print1("!!! Curve ",t[k]," is ");
 print(" isogenous to curve ",e," but missing from the list !!!");ans=0)));
@@ -283,7 +304,9 @@ aplist(ee,n)=vector(n,j,ellap(ee,prime(j)))
 \\considered isogenous if their first nap a_p agree.
 nap=25;   
 
-{test(cond,elist)=local(n,classes,num,ej,aplists);
+test(cond,elist)=
+{
+local(n,classes,num,ej,aplists);
 n=length(elist);
 classes=vector(n,j,0);aplists=vector(n,j,0);
 for(j=1,n,ej=ellinit(elist[j]);aplists[j]=aplist(ej,nap));
@@ -303,7 +326,9 @@ print("conductor ",cond,", ",n," curves",", ",num," classes");
 
 \\njaylist=length(jaylist);
 
-{newtestlist(cond,elist)=local(n,ans);
+newtestlist(cond,elist)=
+{
+local(n,ans);
 n=length(elist);ans=1;
 for(j=1,n,e=elist[j];t=allisog1(e);
 for(k=1,length(t),e2=t[k];ee2=ellinit(e2);j2=ee2[13];
@@ -316,7 +341,9 @@ if(ans,print("Conductor ",cond," OK"),print("Conductor ",cond," NOT OK"));ans
 \\The following converts PARI's coding for Kodaira symbols to mine!
 convkod(k)=if(k==1,0,if(k>4,10*(k-4),if(k>0,k,if(k==-1,1,if(k<-4,1-10*(k+4),k+9)))))
 
-{isogtab(N,e,v,r,ntor)=local(elist,ee,plist,nplist,cplist,jayden,kodlist);
+isogtab(N,e,v,r,ntor)=
+{
+local(elist,ee,plist,nplist,cplist,jayden,kodlist);
 print(N);
 \\print(e[1]," ",e[2]," ",e[3]," ",e[4]," ",e[5]," ",r," ",ntor);
 elist=listisog(e,v);plist=Vec(factor(N)[,1]);nplist=length(plist);
@@ -340,7 +367,9 @@ print();
 
 codes=["A","B","C","D","E","F","G","H","I","J","K","L","M","N","O","P","Q","R","S","T","U","V","W","X","Y","Z","AA","BB","CC","DD","EE","FF","GG","HH","II","JJ","KK","LL","MM","NN","OO","PP","QQ","RR","SS","TT","UU","VV","WW","XX","YY","ZZ","AAA","BBB","CCC","DDD","EEE","FFF","GGG","HHH","III","JJJ","KKK","LLL","MMM","NNN","OOO","PPP","QQQ","RRR","SSS","TTT","UUU","VVV","WWW","XXX","YYY","ZZZ","AAAA","BBBB","CCCC","DDDD","EEEE","FFFF","GGGG","HHHH","IIII","JJJJ","KKKK","LLLL","MMMM","NNNN","OOOO","PPPP","QQQQ","RRRR","SSSS","TTTT","UUUU","VVVV","WWWW","XXXX","YYYY","ZZZZ","AAAAA","BBBBB","CCCCC","DDDDD","EEEEE","FFFFF","GGGGG","HHHHH","IIIII","JJJJJ","KKKKK","LLLLL","MMMMM","NNNNN","OOOOO","PPPPP","QQQQQ","RRRRR","SSSSS","TTTTT","UUUUU","VVVVV","WWWWW","XXXXX","YYYYY","ZZZZZ"];
 
-{isogtaba(N,cl,e,v,r,ntor)=local(elist,jle,edash,nt);
+isogtaba(N,cl,e,v,r,ntor)=
+{
+local(elist,jle,edash,nt);
 \\print(e[1]," ",e[2]," ",e[3]," ",e[4]," ",e[5]);
 elist=listisog(e,v);
 \\print(length(elist));
@@ -353,7 +382,9 @@ print())}
 
 \\ Produce a table similar to William's:
 
-{allisogtab1(N,cl,e)=local(elist,n,m);
+allisogtab1(N,cl,e)=
+{
+local(elist,n,m);
 elist=listisog(e,0);
 n=length(elist);
 m=matid(n);
@@ -363,7 +394,8 @@ m=vector(n,i,m[i,]);
 print(N," ",cl," 1 ",e," ",vector(n,j,elist[j][3])," ",m);
 }
 
-{allisogtab(N,cl,e,v)= 
+allisogtab(N,cl,e,v)= 
+{
 local(ee,cond,fromlist,fromlistl,ans,num,t,m,mm,list,inum,e1,e2,l);
 ee=ellinit(e);
 cond=ellglobalred(ee)[1];
@@ -402,7 +434,8 @@ m=vector(num,i,m[i,]);
 print(N," ",cl," 1  ",e," ",ans," ",m);
 }
 
-{allisoglist(e)= 
+allisoglist(e)= 
+{
 local(ee,cond,fromlist,fromlistl,ans,num,t,m,mm,list,inum,e1,e2,l);
 ee=ellinit(e);
 cond=ellglobalred(ee)[1];

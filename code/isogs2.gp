@@ -1,24 +1,26 @@
 default(realprecision,50);
-verb=0;
+\\verb=0;
 
 \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 \\
 \\ Roots of a polynomial!  (not elliptic curve specific)
 \\
 \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
-{
 polratroots(pol)=
-local(fx,ans);
+{
+local(fx,ans,fxj);
 fx=factor(pol); ans=[];
-for(j=1,#(fx~),if(poldegree(fxj=fx[j,1])==1,
+for(j=1,#(fx~),fxj=fx[j,1];
+if(poldegree(fxj)==1,
 ans=concat(ans,[-polcoeff(fxj,0)/polcoeff(fxj,1)])));
 ans;
 }
 
+two_torsion(e)= 
 {
-two_torsion(e)= local(x,ee,x2s,nx2s);
+local(ee,x2s);
 ee=ellinit(e);
-x2s=polratroots(elldivpol(ee,2));
+x2s=polratroots(elldivpol(ee,2,x));
 vector(#(x2s),j,[x2s[j],-ee.a1*x2s[j]-4*ee.a3]);
 }
 
@@ -27,8 +29,9 @@ vector(#(x2s),j,[x2s[j],-ee.a1*x2s[j]-4*ee.a3]);
 \\ "precision loss in \\truncation" (sent to sterr) try doubling the
 \\ precision.
 
+two_isogs(e)= 
 {
-two_isogs(e)= local(ee,tt,ans,T,xj,t,e2);
+local(ee,tt,ans,T,xj,t,e2);
 ee=ellinit(e,1);
 tt=two_torsion(e);
 ans=vector(length(tt),j,0);
@@ -41,15 +44,17 @@ for(j=1,length(tt),
 ans
 }
 
+isin(e,list,n)=
 {
-isin(e,list,n)=local(ans,j);
+local(ans,j);
 ans=0;j=1;
 while((j<=n)&&(ans==0),ans=(e==list[j]);j=j+1);
 ans
 }
 
-{
 two_power_isogs(e)=
+{
+local(ans,i,j,ee,e2);
 ans=[e]; \\ list of curves in the class
 i=0;     \\ index of last curve processed
 j=1;     \\ number of curves in list
