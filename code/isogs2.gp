@@ -1,5 +1,5 @@
 default(realprecision,50);
-verb=0;
+\\verb=0;
 
 \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 \\
@@ -8,9 +8,10 @@ verb=0;
 \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\
 polratroots(pol)=
 {
-local(fx,ans);
+local(fx,ans,fxj);
 fx=factor(pol); ans=[];
-for(j=1,#(fx~),if(poldegree(fxj=fx[j,1])==1,
+for(j=1,#(fx~),fxj=fx[j,1];
+if(poldegree(fxj)==1,
 ans=concat(ans,[-polcoeff(fxj,0)/polcoeff(fxj,1)])));
 ans;
 }
