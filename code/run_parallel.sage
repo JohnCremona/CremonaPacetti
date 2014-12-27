@@ -56,3 +56,18 @@ def prime_run(first,last,outfilename):
                 of.write("%s %s\n" % (ri[0],ri[1]))
             of.flush()
     of.close()
+
+# Strip non-prime-conductor curves from an output file (for comparison with database)
+# Input lies should loook like 
+#
+# 11 [0,-1,1,0,0]
+#
+
+def prime_conductor_only(infilename):
+    inf=file(infilename)
+    outf=file(infilename+".primes",mode='w')
+    for L in inf.readlines():
+        if ZZ(L.split()[0]).is_prime():
+            outf.write(L)
+    inf.close()
+    outf.close()

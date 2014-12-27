@@ -1,6 +1,6 @@
 \\ ---------------  GP code  ---------------------------------------
 \\
-\\ Time-stamp: <2014-11-22 15:55:30 apacetti>
+\\ Time-stamp: <2014-12-27 16:15:18 jec>
 \\ Description: Routine for computing curves of a given conductor
 \\
 \\
@@ -9,10 +9,10 @@
 \\ Created:             12 Nov. 2014
 \\
 
-\\ Computation of 2-isogenies and chains of these
-read("isogs2.gp");
 \\ Computation of general isogenies
 read("isogs.gp");
+\\ Computation of 2-isogenies and chains of these
+read("isogs2.gp");
 \\ Reduction of cubics with negative discriminant
 read("reduce_cubic.gp");
 
