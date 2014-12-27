@@ -1,0 +1,8 @@
+p.1-100000.out: output for all p to 100000 (p-power conductors), sorted
+pr.1-100000.out: extract from provious, prime conductors only
+p.db.1-100000: all prime conductor curves for p<100000 from database
+missing: database curves not in output (diff of previous 2 files)
+
+2torsionlist.out: Ariel's list of 2-torsion curves for primes to
+                  100000 after bug fix
+
