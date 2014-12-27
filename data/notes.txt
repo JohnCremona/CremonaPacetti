@@ -1,9 +1,14 @@
-p.1-100000.out: output for all p to 100000 (p-power conductors), sorted
-p.1-100000.out.primes: extract from previous, prime conductors only
+p.1-100000.out: output for all p to 100000 (p-power conductors),
+                sorted: 3841 curves
+
+p.1-100000.out.primes: extract from previous, prime conductors only,
+                       sorted: 1740 curves
+
 p.db.1-100000: all prime conductor curves for p<100000 from database
 
-missing: database curves not in output (diff of previous 2 files) --
-contains 212 curves in range 10000-22500 so this range should be rerun.
+   *** the previous two files are identical, showing that the
+   algorithm found all the curves it should, or prime conductor <
+   100000 ***
 
 2torsionlist.out: Ariel's list of 2-torsion curves for primes to
                   100000 after bug fix
