@@ -48,6 +48,8 @@ def compute_curves_multi(Nlist,flag2isogenies=False,flagconductorsupport=False):
 
 # Sample usage:
 #
+# Run over primes from first to last, output to a file (which will be overwritten)
+#
 def prime_run(first,last,outfilename):
     of = file(outfilename,mode='w')
     for r in compute_curves_multi(prime_range(first,last+1)):
@@ -57,8 +59,49 @@ def prime_run(first,last,outfilename):
             of.flush()
     of.close()
 
+# Iterator over square-free N from first to last; if no_primes
+# (default False) is True, prime N will be skipped.
+#
+def sqf_iterator(first,last,no_primes=False):
+    for N in xsrange(first,last+1):
+        if N.is_squarefree() and not (no_primes and N.is_prime()):
+            yield N
+
+# Iterator over square-free N with exactly k prime factors, from first
+# to last.
+#
+def sqf_k_iterator(first,last,k):
+    for N in xsrange(first,last+1):
+        if len(N.factor())==k:
+            yield N
+
+# Run over square-free N from first to last, output to a file (which
+# will be overwritten); if no_primes (default False) is True, prime N
+# will be skipped.
+#
+def sqf_run(first,last,outfilename, no_primes=False):
+    of = file(outfilename,mode='w')
+    for r in compute_curves_multi(sqf_iterator(first,last,no_primes)):
+        if r:
+            for ri in r:
+                of.write("%s %s\n" % (ri[0],ri[1]))
+            of.flush()
+    of.close()
+
+# Run over square-free N with exactly k prime factors from first to
+# last, output to a file (which will be overwritten).
+#
+def sqf_k_run(first,last,outfilename, k):
+    of = file(outfilename,mode='w')
+    for r in compute_curves_multi(sqf_k_iterator(first,last,k)):
+        if r:
+            for ri in r:
+                of.write("%s %s\n" % (ri[0],ri[1]))
+            of.flush()
+    of.close()
+
 # Strip non-prime-conductor curves from an output file (for comparison with database)
-# Input lies should loook like 
+# Input lies should loook like
 #
 # 11 [0,-1,1,0,0]
 #
