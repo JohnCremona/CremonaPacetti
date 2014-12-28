@@ -32,9 +32,14 @@ def compute_curves(N,flag2isogenies=False,flagconductorsupport=False):
     result = file(tempfile).read()
     os.unlink(tempfile)
     #print("gp output = %s" % result)
-    result = eval(result) # much easier than parsing but possibly dangerous
-    result.sort()
-    return result
+    if result:
+        result = eval(result) # much easier than parsing but possibly dangerous
+        result.sort()
+        return result
+    else:
+        print("gp output file for N=%s is empty" % N)
+        return [[N,'gp error']]
+
 
 @parallel(30)
 def compute_curves_parallel(params):
