@@ -46,18 +46,7 @@ def compute_curves_multi(Nlist,flag2isogenies=False,flagconductorsupport=False):
     for r in results:
         yield r[1]
 
-# Sample usage:
-#
-# Run over primes from first to last, output to a file (which will be overwritten)
-#
-def prime_run(first,last,outfilename):
-    of = file(outfilename,mode='w')
-    for r in compute_curves_multi(prime_range(first,last+1)):
-        if r:
-            for ri in r:
-                of.write("%s %s\n" % (ri[0],ri[1]))
-            of.flush()
-    of.close()
+# Utility functions producing nice output to a file for various ranges of N:
 
 # Iterator over square-free N from first to last; if no_primes
 # (default False) is True, prime N will be skipped.
@@ -72,28 +61,35 @@ def sqf_iterator(first,last,no_primes=False):
 #
 def sqf_k_iterator(first,last,k):
     for N in xsrange(first,last+1):
-        if len(N.factor())==k:
+        if N.is_squarefree() and len(N.factor())==k:
             yield N
 
-# Run over square-free N from first to last, output to a file (which
-# will be overwritten); if no_primes (default False) is True, prime N
-# will be skipped.
+# Parallel run over any iterator, output to a file (which will be overwritten).
 #
-def sqf_run(first,last,outfilename, no_primes=False):
-    of = file(outfilename,mode='w')
-    for r in compute_curves_multi(sqf_iterator(first,last,no_primes)):
-        if r:
-            for ri in r:
-                of.write("%s %s\n" % (ri[0],ri[1]))
-            of.flush()
-    of.close()
+# 'it' is any iterator.
+#
+# Examples:
+#
+# (1) to run over primes from p1 to p2:
+#           run_general(prime_range(p1,p2+1),f)
+# (2) to run over all squarefrees from N1 to N2:
+#           run_general(sqf_iterator(N1,N2),f)
+# (3) to run over all non-prime squarefrees from N1 to N2:
+#           run_general(sqf_iterator(N1,N2,True),f)
+# (4) to run over squarefrees with k primes from N1 to N2:
+#           run_general(sqf_k_iterator(N1,N2,k),f)
 
-# Run over square-free N with exactly k prime factors from first to
-# last, output to a file (which will be overwritten).
-#
-def sqf_k_run(first,last,outfilename, k):
+# NB in the latter, all curves with bad reduction exactly at p|N will
+# be found, not just those with good reducation at all primes not
+# dividing N.  For that, use
+
+# (4a) to run over squarefrees with k primes from N1 to N2 including
+# curves with good reduction at some primes dividing each N:
+#           run_general(sqf_k_iterator(N1,N2,k),f,flagconductorsupport=True)
+
+def run_general(it,outfilename,flag2isogenies=False,flagconductorsupport=False):
     of = file(outfilename,mode='w')
-    for r in compute_curves_multi(sqf_k_iterator(first,last,k)):
+    for r in compute_curves_multi(it,flag2isogenies,flagconductorsupport):
         if r:
             for ri in r:
                 of.write("%s %s\n" % (ri[0],ri[1]))
@@ -101,7 +97,7 @@ def sqf_k_run(first,last,outfilename, k):
     of.close()
 
 # Strip non-prime-conductor curves from an output file (for comparison with database)
-# Input lies should loook like
+# Input lines should loook like
 #
 # 11 [0,-1,1,0,0]
 #
