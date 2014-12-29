@@ -97,7 +97,9 @@ def run_general(it,outfilename,flag2isogenies=False,flagconductorsupport=False):
     for r in compute_curves_multi(it,flag2isogenies,flagconductorsupport):
         if r:
             for ri in r:
-                of.write("%s %s\n" % (ri[0],ri[1]))
+                N = ZZ(ri[0])
+                E = [ZZ(ai) for ai in ri[1]]
+                of.write("%s %s\n" % (N,E))
             of.flush()
     of.close()
 
