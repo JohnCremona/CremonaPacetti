@@ -20,7 +20,7 @@ two_torsion(e)=
 {
 local(ee,x2s);
 ee=ellinit(e);
-x2s=polratroots(elldivpol(ee,2,x));
+x2s=polratroots(elldivpol(ee,2));
 vector(#(x2s),j,[x2s[j],-ee.a1*x2s[j]-4*ee.a3]);
 }
 

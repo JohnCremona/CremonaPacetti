@@ -1,6 +1,6 @@
 \\ ---------------  GP code  ---------------------------------------
 \\
-\\ Time-stamp: <2014-11-22 15:55:30 apacetti>
+\\ Time-stamp: <2014-12-29 14:01:37 jec>
 \\ Description: Routine for computing curves of a given conductor
 \\
 \\
@@ -9,10 +9,10 @@
 \\ Created:             12 Nov. 2014
 \\
 
-\\ Computation of 2-isogenies and chains of these
-read("isogs2.gp");
 \\ Computation of general isogenies
 read("isogs.gp");
+\\ Computation of 2-isogenies and chains of these
+read("isogs2.gp");
 \\ Reduction of cubics with negative discriminant
 read("reduce_cubic.gp");
 
@@ -225,7 +225,12 @@ CubicOrderGenerators1(K,Om)=
 	answer=[];
 	zk=[redbasis[2],redbasis[3]]; \\print1("#");
 \\	print(Form);
-	thuevalues=thue(Form,1);
+\\ Follow suggestion of Karim (email 2014-12-28) to avoid run-time
+\\	error with N=6941 at the cost of speed (certification slow)
+\\ -with certification:
+\\	thuevalues=thue(thueinit(Form,1),1);
+\\ -without certification:
+	thuevalues=thue(thueinit(Form,0),1);
 	for(j=1,length(thuevalues),
 	        answer=concat(answer,minpoly(Mod(thuevalues[j]*zk~,K.pol))));
 	answer
@@ -244,7 +249,11 @@ CubicOrderGenerators2(K,Om)=
 	answer=[];
 	zk=[redbasis[2],redbasis[3]]; \\print1("*");
 \\	print(Form);
-	thuevalues=thue(Form[1],1);
+\\ Follow suggestion of Karim (email 2014-12-28) to avoid run-time error with N=6941
+\\ -with certification:
+\\	thuevalues=thue(thueinit(Form[1],1),1);
+\\ -without certification:
+	thuevalues=thue(thueinit(Form[1],0),1);
 	for(j=1,length(thuevalues),
 	        answer=concat(answer,minpoly(Mod(thuevalues[j]*zk~,K.pol))));
 	answer
