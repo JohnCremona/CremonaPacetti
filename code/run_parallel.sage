@@ -115,3 +115,24 @@ def prime_conductor_only(infilename):
             outf.write(L)
     inf.close()
     outf.close()
+
+# Stand-alone function to process several tempfile's (cat'ed together)
+# into an output file.  Written after a parallel run which crashed
+# (before the error handling was introduced) leaving 29 others running
+# ok, but their gp output files were not processed because the
+# controlling Sage function had stopped.
+#
+def process_tempfiles(inf,outf):
+    of = file(outf, mode='w')
+    n = 0
+    i = 0
+    for L in file(inf).readlines():
+        r=eval(L)
+        ni = len(r)
+        n += ni
+        i += 1
+        print("%s curves read from line %s (%s total so far)" % (ni,i,n))
+        for ri in r:
+            if ri:
+                of.write("%s %s\n" % (ri[0],ri[1]))
+    of.close()
