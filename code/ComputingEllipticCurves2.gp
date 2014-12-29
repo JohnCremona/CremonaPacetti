@@ -1,6 +1,6 @@
 \\ ---------------  GP code  ---------------------------------------
 \\
-\\ Time-stamp: <2014-12-29 14:01:37 jec>
+\\ Time-stamp: <2014-12-29 19:24:41 apacetti>
 \\ Description: Routine for computing curves of a given conductor
 \\
 \\
@@ -144,15 +144,18 @@ CurvesWith2TorsionofDiscriminant(N)=
 \\ 2-isogenies or not.
 
 
-CurvesWith2Torsion(N,flagSzpiro,flag2isogenies,flagConductorsupport)=
+ComputeCurvesWith2Torsion(N,flag2isogenies,flagConductorsupport)=
 	{local(discbound,primedivisors,answer,V2T,Elred,M);
 	answer=[];M=squarefree(N);
 	primedivisors=factor(2*N)[,1]~;
-	if(flagSzpiro!=0, 
-	    discbound=Vec(factor(SzpiroBound(N))~),
-	    discbound=[[2,if(N%2!=0,8,24)]];
-	    if(N%3==0,discbound=concat(discbound,[[3,18]]));
-	    for(l=1,length(primedivisors),if(primedivisors[l]%2!=0&&primedivisors[l]%3!=0,discbound=concat(discbound,[[primedivisors[l],12]]))));
+	discbound=Vec(factor(SzpiroBound(N))~);
+
+\\	if(flagSzpiro!=0, 
+\\	    discbound=Vec(factor(SzpiroBound(N))~),
+\\	    discbound=[[2,if(N%2!=0,8,24)]];
+\\	    if(N%3==0,discbound=concat(discbound,[[3,18]]));
+\\	    for(l=1,length(primedivisors),if(primedivisors[l]%2!=0&&primedivisors[l]%3!=0,discbound=concat(discbound,[[primedivisors[l],12]]))));
+
         forvec(X=vector(length(discbound),k,[0,discbound[k][2]]),
 	    answer=concat(answer,CurvesWith2TorsionofDiscriminant(vector(length(primedivisors),k,[primedivisors[k],X[k]]))));
 	answer=Set(answer);
@@ -409,12 +412,11 @@ vectorfind(v,elmnt)=
 \\ conductor is supported in all primes of N, so if N=11*5, the curves
 \\ with conductor 11 will be omited.
 
-ComputeCurves(N,flagIsogenies,flagConductorsupport)=
+ComputeCurvesWithout2Torsion(N,flagIsogenies,flagConductorsupport)=
 	{local(V2T,VC3,VS3,curvesC3,curvesS3,Fact,Isogs,Elist,E,EN,Elred,result);
-	N=squarefree(N); 
+	N=squarefree(N); result=[];
 	Fact=factor(2*N)[,1]~;
 	for(k=1,length(Fact),Fact[k]*=kronecker(-1,Fact[k]));
-	result=CurvesWith2Torsion(N,1,flagIsogenies,flagConductorsupport);
 	curvesC3=CurvesWithC3Image(N,1,flagConductorsupport);
 	curvesC3=ComputeTwists(curvesC3,Fact);
 	VC3=curvesC3;
