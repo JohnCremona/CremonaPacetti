@@ -1,5 +1,6 @@
 from os import system, path, getpid
-PATH_TO_GP = "/home/apacetti/bin"
+HOME = os.environ['HOME']
+PATH_TO_GP = os.path.join(HOME,'bin')
 GP = os.path.join(PATH_TO_GP,"gp")
 GP_FLAGS = "--default parisizemax=10000M -q"
 GP_SCRIPT = "ComputingEllipticCurves2.gp"
