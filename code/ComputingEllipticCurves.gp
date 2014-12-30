@@ -1,6 +1,6 @@
 \\ ---------------  GP code  ---------------------------------------
 \\
-\\ Time-stamp: <2014-12-29 19:24:41 apacetti>
+\\ Time-stamp: <2014-12-30 12:04:40 jec>
 \\ Description: Routine for computing curves of a given conductor
 \\
 \\
@@ -171,7 +171,7 @@ ComputeCurvesWith2Torsion(N,flag2isogenies,flagConductorsupport)=
 	    if(flagConductorsupport==0,
 		if(Elred[1]%2==N%2 && Elred[1]%M==0,answer=concat(answer,[[Elred[1],V2T[k]]])),answer=concat(answer,[[Elred[1],V2T[k]]])));
 	answer
-}
+};
 
 \\======================================================================
 \\ Routines for no 2-torsion curves
@@ -512,3 +512,12 @@ ellquadtwist(E,D)=
 	D^3*(E[5]-E[3]^2/4*(D-1))]
 };
 
+\\======================================================================
+\\ Main routine to compute all curves with good reduction outside N by
+\\ concatenating the lists with and without 2-torsion.  Flags as for
+\\ ComputeCurvesWith2Torsion.
+
+ComputeCurves(N,flag2isogenies,flagConductorsupport)=
+        {concat(ComputeCurvesWith2Torsion(N,flag2isogenies,flagConductorsupport),
+                ComputeCurvesWithout2Torsion(N,flagIsogenies,flagConductorsupport));
+};
