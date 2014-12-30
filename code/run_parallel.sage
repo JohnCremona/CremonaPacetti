@@ -5,20 +5,24 @@ GP = os.path.join(PATH_TO_GP,"gp")
 GP_FLAGS = "--default parisizemax=10000M -q"
 GP_SCRIPT = "ComputingEllipticCurves.gp"
 
-def compute_curves(N,flag2isogenies=False,flagconductorsupport=False):
+def compute_curves(N,torsionflag=0,flag2isogenies=False,flagconductorsupport=False):
     """Compute elliptic curves with good reduction outside support of N.
 
     INPUT:
 
     - N (integer) -- product of primes at which bad reduction is allowed
 
-    - flag2isogenies (boolean, default False) -- if False, computes curves including 
+    - torsionflag (0 (default),1, or 2) -- if 1, compute only curves
+      with no 2-torsion; if 2, only those with 2-torsion;
+      else(default) all curves.
+
+    - flag2isogenies (boolean, default False) -- if False, computes curves including
       two-isogenies. If true avoids computing any kind of isogenies.
 
     - flagconductorsupport (boolean, default False) -- if False computes ONLY the curves
       whose conductors are supported at ALL primes dividing N and discards
-      the intermediate computations. If True, computes all curves whose 
-      conductor is supported at the set of primes dividing N. Note that 
+      the intermediate computations. If True, computes all curves whose
+      conductor is supported at the set of primes dividing N. Note that
       the default option is faster since it avoids solving many thue equations.
 
     OUTPUT:
@@ -27,7 +31,15 @@ def compute_curves(N,flag2isogenies=False,flagconductorsupport=False):
 
     """
     tempfile = 'tempfile-'+str(N)+'-'+str(getpid())
-    comm = "echo 'ComputeCurves(%s,%s,%s)' | %s %s %s > %s" % (N,int(flag2isogenies),int(flagconductorsupport),GP,GP_FLAGS,GP_SCRIPT,tempfile)
+    gp_function = "ComputeCurves"
+    if torsionflag==1:
+        gp_function += "Without2Torsion"
+    elif torsionflag==2:
+        gp_function += "With2Torsion"
+
+    comm = "echo '%s(%s,%s,%s)' | %s %s %s > %s" % (gp_function,
+                                                    N,int(flag2isogenies),int(flagconductorsupport),
+                                                    GP,GP_FLAGS,GP_SCRIPT,tempfile)
     #print("Command line = %s" % comm)
     os.system(comm)
     result = file(tempfile).read()
@@ -47,8 +59,8 @@ def compute_curves_parallel(params):
     print("Starting N=%s" % params[0])
     return compute_curves(*params)
 
-def compute_curves_multi(Nlist,flag2isogenies=False,flagconductorsupport=False):
-    results = compute_curves_parallel([[N,flag2isogenies,flagconductorsupport] for N in Nlist])
+def compute_curves_multi(Nlist,torsionflag=0,flag2isogenies=False,flagconductorsupport=False):
+    results = compute_curves_parallel([[N,torsionflag,flag2isogenies,flagconductorsupport] for N in Nlist])
     for r in results:
         yield r[1]
 
@@ -76,13 +88,13 @@ def sqf_k_iterator(first,last,k):
 #
 # Examples:
 #
-# (1) to run over primes from p1 to p2:
+# (1) to run over primes from p1 to p2 (with & without 2-torsion):
 #           run_general(prime_range(p1,p2+1),f)
-# (2) to run over all squarefrees from N1 to N2:
-#           run_general(sqf_iterator(N1,N2),f)
-# (3) to run over all non-prime squarefrees from N1 to N2:
-#           run_general(sqf_iterator(N1,N2,True),f)
-# (4) to run over squarefrees with k primes from N1 to N2:
+# (2) to run over all squarefrees from N1 to N2 (no 2-torsion):
+#           run_general(sqf_iterator(N1,N2),f,1)
+# (3) to run over all non-prime squarefrees from N1 to N2 (only 2-torsion):
+#           run_general(sqf_iterator(N1,N2,True),f,2)
+# (4) to run over squarefrees with k primes from N1 to N22 (with & without 2-torsion):
 #           run_general(sqf_k_iterator(N1,N2,k),f)
 
 # NB in the latter, all curves with bad reduction exactly at p|N will
@@ -93,9 +105,9 @@ def sqf_k_iterator(first,last,k):
 # curves with good reduction at some primes dividing each N:
 #           run_general(sqf_k_iterator(N1,N2,k),f,flagconductorsupport=True)
 
-def run_general(it,outfilename,flag2isogenies=False,flagconductorsupport=False):
+def run_general(it,outfilename,torsionflag=0,flag2isogenies=False,flagconductorsupport=False):
     of = file(outfilename,mode='w')
-    for r in compute_curves_multi(it,flag2isogenies,flagconductorsupport):
+    for r in compute_curves_multi(it,torsionflag,flag2isogenies,flagconductorsupport):
         if r:
             for ri in r:
                 N = ZZ(ri[0])
