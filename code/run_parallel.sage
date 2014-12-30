@@ -3,7 +3,7 @@ HOME = os.environ['HOME']
 PATH_TO_GP = os.path.join(HOME,'bin')
 GP = os.path.join(PATH_TO_GP,"gp")
 GP_FLAGS = "--default parisizemax=10000M -q"
-GP_SCRIPT = "ComputingEllipticCurves2.gp"
+GP_SCRIPT = "ComputingEllipticCurves.gp"
 
 def compute_curves(N,flag2isogenies=False,flagconductorsupport=False):
     """Compute elliptic curves with good reduction outside support of N.
