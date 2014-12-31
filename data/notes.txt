@@ -1,3 +1,6 @@
+NB Actual data files are not in this repository any more since they
+are large, but here we keep a list of the files and what they contain.
+
 p.1-100000.out: output for all p to 100000 (p-power conductors),
                 sorted: 3841 curves
 
@@ -11,8 +14,12 @@ p.db.1-100000: all prime conductor curves for p<100000 from database
    100000 ***
 
 2torsionlist.out: Ariel's list of 2-torsion curves for primes to
-                  100000 after bug fix
+                  100000 after bug fix (merged into other files so
+                  could be removed)
 
-test-sqf.1-100: all non-prime squarefree N up to 100 (27644 curves)
+test-sqf.1-100: all non-prime squarefree N up to 100        (27644 curves)
 
-test-pq.1-1000: all N=p*q up to 1000 (68162 curves)
+test-pq.1-1000: all N=p*q up to 1000                        (68162 curves)
+test-pq.1000-6940: N=p*q from 1001 to 6940                  (53840 curves)
+test-pq.69411-10000: all N=p*q from 6941 to 10000           (21848 curves)
+2torsion.1-2307: all N to 2307, curves with 2-torsion only (427802 curves)
