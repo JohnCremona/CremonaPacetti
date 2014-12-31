@@ -22,4 +22,6 @@ test-sqf.1-100: all non-prime squarefree N up to 100        (27644 curves)
 test-pq.1-1000: all N=p*q up to 1000                        (68162 curves)
 test-pq.1000-6940: N=p*q from 1001 to 6940                  (53840 curves)
 test-pq.69411-10000: all N=p*q from 6941 to 10000           (21848 curves)
+test-pq.10001-25000: all N=p*q from 10001 to 25000          (92126 curves)
+
 2torsion.1-2307: all N to 2307, curves with 2-torsion only (427802 curves)
