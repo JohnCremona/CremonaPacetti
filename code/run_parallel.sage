@@ -57,6 +57,7 @@ def compute_curves(N,torsionflag=0,flag2isogenies=False,flagconductorsupport=Fal
 @parallel(30)
 def compute_curves_parallel(params):
     print("Starting N=%s" % params[0])
+    sys.stdout.flush()
     return compute_curves(*params)
 
 def compute_curves_multi(Nlist,torsionflag=0,flag2isogenies=False,flagconductorsupport=False):
@@ -111,8 +112,11 @@ def run_general(it,outfilename,torsionflag=0,flag2isogenies=False,flagconductors
         if r:
             for ri in r:
                 N = ZZ(ri[0])
-                E = [ZZ(ai) for ai in ri[1]]
-                of.write("%s %s\n" % (N,E))
+                if ri[1]=='gp error':
+                    of.write("%s %s\n" % (N,ri[1]))
+                else:
+                    a1,a2,a3,a4,a6 = [ZZ(ai) for ai in ri[1]]
+                of.write("%s [%s,%s,%s,%s,%s]\n" % (N,a1,a2,a3,a4,a6))
             of.flush()
     of.close()
 
@@ -149,5 +153,7 @@ def process_tempfiles(inf,outf):
         print("%s curves read from line %s (%s total so far)" % (ni,i,n))
         for ri in r:
             if ri:
-                of.write("%s %s\n" % (ri[0],ri[1]))
+                N = ZZ(ri[0])
+                a1,a2,a3,a4,a6 = [ZZ(ai) for ai in ri[1]]
+                of.write("%s [%s,%s,%s,%s,%s]\n" % (N,a1,a2,a3,a4,a6))
     of.close()
