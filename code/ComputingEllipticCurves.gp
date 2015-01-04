@@ -1,6 +1,6 @@
 \\ ---------------  GP code  ---------------------------------------
 \\
-\\ Time-stamp: <2014-12-30 12:04:40 jec>
+\\ Time-stamp: <2015-01-04 12:41:51 jec>
 \\ Description: Routine for computing curves of a given conductor
 \\
 \\
@@ -233,9 +233,11 @@ CubicOrderGenerators1(K,Om)=
 \\ -with certification:
 \\	thuevalues=thue(thueinit(Form,1),1);
 \\ -without certification:
-	thuevalues=thue(thueinit(Form,0),1);
-	for(j=1,length(thuevalues),
-	        answer=concat(answer,minpoly(Mod(thuevalues[j]*zk~,K.pol))));
+	thuevalues=iferr(thue(thueinit(Form,0),1),E,E);
+        if(type(thuevalues)=="t_ERROR",
+           print("Error caught in thue() with F = ",Form," : ",thuevalues),
+           for(j=1,length(thuevalues),
+	        answer=concat(answer,minpoly(Mod(thuevalues[j]*zk~,K.pol)))));
 	answer
 };
 
@@ -256,9 +258,11 @@ CubicOrderGenerators2(K,Om)=
 \\ -with certification:
 \\	thuevalues=thue(thueinit(Form[1],1),1);
 \\ -without certification:
-	thuevalues=thue(thueinit(Form[1],0),1);
-	for(j=1,length(thuevalues),
-	        answer=concat(answer,minpoly(Mod(thuevalues[j]*zk~,K.pol))));
+	thuevalues=iferr(thue(thueinit(Form[1],0),1),E,E);
+        if(type(thuevalues)=="t_ERROR",
+           print("Error caught in thue() with F = ",Form[1]," : ",thuevalues),
+           for(j=1,length(thuevalues),
+                answer=concat(answer,minpoly(Mod(thuevalues[j]*zk~,K.pol)))));
 	answer
 };
 
