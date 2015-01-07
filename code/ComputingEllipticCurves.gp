@@ -1,6 +1,6 @@
 \\ ---------------  GP code  ---------------------------------------
 \\
-\\ Time-stamp: <2015-01-04 12:41:51 jec>
+\\ Time-stamp: <2015-01-07 16:44:38 jec>
 \\ Description: Routine for computing curves of a given conductor
 \\
 \\
@@ -227,7 +227,7 @@ CubicOrderGenerators1(K,Om)=
 	Form=CubicOrderForm(K,redbasis);
 	answer=[];
 	zk=[redbasis[2],redbasis[3]]; \\print1("#");
-\\	print(Form);
+\\	print("F=",Form," from Om=",Om);
 \\ Follow suggestion of Karim (email 2014-12-28) to avoid run-time
 \\	error with N=6941 at the cost of speed (certification slow)
 \\ -with certification:
@@ -253,7 +253,7 @@ CubicOrderGenerators2(K,Om)=
 	redbasis=CubicOrderGoodBasis(K,concat(concat([Om[1]],Form[2]~*[Om[2],Om[3]]~)~,Om[4]));
 	answer=[];
 	zk=[redbasis[2],redbasis[3]]; \\print1("*");
-\\	print(Form);
+\\	print("F=",Form[1]," from Om=",Om);
 \\ Follow suggestion of Karim (email 2014-12-28) to avoid run-time error with N=6941
 \\ -with certification:
 \\	thuevalues=thue(thueinit(Form[1],1),1);
@@ -319,11 +319,12 @@ CubicFieldSuborders(K,Ninfty)=
 \\ generators and the last one the discriminant of the order. 
 
 CubicOrderForm(K,R,flag)=
-	{local(goodorder,form);
+	{local(goodorder,form,F);
 	goodorder=CubicOrderGoodBasis(K,R);
 	form=CubicOrderCoordinates(goodorder,lift(goodorder[2]^2*Mod(1,K.pol)));
 	form=concat(form,CubicOrderCoordinates(goodorder,lift(goodorder[3]^2*Mod(1,K.pol))));
-	if(flag==0,-form[3]*x^3+form[2]*x^2-form[6]*x+form[5],-form[3]*x^3+form[2]*x^2*y-form[6]*x*y^2+form[5]*y^3)
+	if(flag==0,F=-form[3]*x^3+form[2]*x^2-form[6]*x+form[5],F=-form[3]*x^3+form[2]*x^2*y-form[6]*x*y^2+form[5]*y^3);
+        if(form[3]>0,-F,F)
 };
 
 \\======================================================================
