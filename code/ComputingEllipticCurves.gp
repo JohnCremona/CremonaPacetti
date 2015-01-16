@@ -1,6 +1,6 @@
 \\ ---------------  GP code  ---------------------------------------
 \\
-\\ Time-stamp: <2014-12-30 12:04:40 jec>
+\\ Time-stamp: <2015-01-16 20:27:49 apacetti>
 \\ Description: Routine for computing curves of a given conductor
 \\
 \\
@@ -277,8 +277,24 @@ CurvesWithC3Image(N,flag,flag2)=
 	curves=[];
 	for(k=1,length(fields),
 		K=nfinit(fields[k]);
-		curves=concat(curves,CurvesBigImage(K,N,Ninfty,flag2)));
+		curves=concat(curves,CurvesBigImageC3(K,N,Ninfty,flag2)));
 	vector(length(curves),k,Ell(curves[k]))
+};
+
+\\======================================================================
+\\ As before, but to compute with C3 images, since Galois conjugates
+\\ appear many times.
+
+CurvesBigImageC3(K,N,Ninfty,flag)=
+	{local(answer,Orders);
+	answer=[]; 
+	Orders=CubicFieldSubordersC3(K,Ninfty); 
+	for(k=1,length(Orders),
+	    if(flag==0,
+	        if(Orders[k][4]%if(N%2==0,N/2,N)==0,
+	        answer=concat(answer,if(sign(K.disc)==1,CubicOrderGenerators1(K,Orders[k]),CubicOrderGenerators2(K,Orders[k])))),
+		answer=concat(answer,if(sign(K.disc)==1,CubicOrderGenerators1(K,Orders[k]),CubicOrderGenerators2(K,Orders[k])))));
+	answer
 };
 
 
@@ -309,6 +325,56 @@ CubicFieldSuborders(K,Ninfty)=
 		FF[1][2]--,aux=answer;FF=vectorkill(FF,1)),FF=[]));
 	answer
 };
+
+\\======================================================================
+\\ Same but for the C3 case.
+
+CubicFieldSubordersC3(K,Ninfty)=
+	{local(Fact,FF,answer,aux,aux2,flag,ComputedOrder);
+	if(Ninfty%(K.disc)!=0,error("the field discriminant does not divide the bound"));
+	flag=0;
+	if(abs(Ninfty/K.disc)==1,return([CubicOrderGoodBasis(K,concat(K.zk,K.disc))]));
+	Fact=factor(abs(Ninfty/K.disc));
+	FF=[];for(k=1,matsize(Fact)[1],if(Fact[k,2]!=1,FF=concat(FF,[[Fact[k,1],Fact[k,2]\2]])));
+
+/* Here we need to get all the vertices of the tree. It is done by
+ constructing a tree, and then looping over all the constructed
+ elements to get the new branches.*/
+
+	aux2=aux=answer=[[CubicOrderGoodBasis(K,concat(K.zk,K.disc)),0]];
+	while(FF!=[],
+	    if(abs(answer[length(answer)][1][4]<abs(Ninfty)),
+	    if(FF[1][2]!=0,aux2=[]; 
+	        for(j=1,length(aux),aux2=concat(aux2,CubicOrderSuborderC3(K,aux[j],FF[1][1])));
+		answer=concat(answer,aux2);aux=aux2;
+		FF[1][2]--,aux=answer;FF=vectorkill(FF,1)),FF=[]));
+	vector(length(answer),k,answer[k][1])
+};
+
+\\======================================================================
+\\ The order given is of the form [1,a,b]. Computes ONLY primitives
+\\ suborders, using Belabas suggestion for the C3 case. Conjugation ONLY
+\\ affects the first suborder which is not Galois stable, then we can
+\\ restrict to the other method. flag says whether one needs to
+\\ compute Galois orbits (if zero) or not.
+
+CubicOrderSuborderC3(K,Order,p)=
+	{local(CF,answer,candidate,Fact,Root,flag,aux);
+	flag=Order[2]; Order=Order[1];
+	if(flag!=0,aux=CubicOrderSuborder(K,Order,p);return(vector(length(aux),k,[aux[k],1])));
+	answer=[];
+	Order=CubicOrderGoodBasis(K,Order);
+	if(isprime(p),,error("not prime index"));
+	CF=CubicOrderForm(K,Order);
+	Fact=factormod(CF,p);
+	if(poldegree(Fact[1,1])==1, Root=-lift(subst(Fact[1,1],x,0));
+	    candidate=if(Root==0,[1,p*Order[2],Order[3],Order[4]*p],
+	        Root=bezout(Root,p)[1];[1,Order[2]+Root*Order[3]+Root*polcoeffvar(CF,[1,2])+Root^2*polcoeffvar(CF,[0,3]),p*Order[3]-Root*p*polcoeffvar(CF,[0,3]),Order[4]*p^2]);
+	    COC=[CubicOrderCoordinates(K.zk,candidate[2]),CubicOrderCoordinates(K.zk,candidate[3])];
+	    if(COC[1]%p!=[COC[1][1]%p,0,0]~||COC[2]%p!=[COC[2][1]%p,0,0]~,answer=concat(answer,candidate)));
+	if(answer!=[],if(matsize(Fact)[1]>1,[[answer,1]],[[answer,0]]),[])
+};
+
 
 \\======================================================================
 \\ Cubic orders are 4 coordinate vectors, where the first 3 are the
@@ -359,7 +425,7 @@ CubicOrderSuborder(K,Order,p)=
 	    COC=[CubicOrderCoordinates(K.zk,candidate[2])~,CubicOrderCoordinates(K.zk,candidate[3])~];
 	    if((COC[1]%p!=[COC[1][1]%p,0,0])||(COC[2]%p!=[COC[2][1]%p,0,0]),answer=concat(answer,[candidate])));
 	for(i=0,p-1,if(subst(subst(CF,x,1),y,i)%p==0,
-	    candidate=[1,Order[2]+i*Order[3]+i*polcoeffvar(CF,[1,2])+i^2*polcoeffvar(CF,[0,3]),p*Order[3]-i*p*polcoeffvar(CF,[0,3]),Order[4]*p];
+	    candidate=[1,Order[2]+i*Order[3]+i*polcoeffvar(CF,[1,2])+i^2*polcoeffvar(CF,[0,3]),p*Order[3]-i*p*polcoeffvar(CF,[0,3]),Order[4]*p^2];
 	    COC=[CubicOrderCoordinates(K.zk,candidate[2]),CubicOrderCoordinates(K.zk,candidate[3])];
 	    if(COC[1]%p!=[COC[1][1]%p,0,0]~||COC[2]%p!=[COC[2][1]%p,0,0]~,answer=concat(answer,[candidate]))));
 	answer
