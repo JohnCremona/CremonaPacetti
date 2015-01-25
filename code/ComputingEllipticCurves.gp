@@ -1,6 +1,6 @@
 \\ ---------------  GP code  ---------------------------------------
 \\
-\\ Time-stamp: <2015-01-16 20:27:49 apacetti>
+\\ Time-stamp: <2015-01-25 14:25:09 apacetti>
 \\ Description: Routine for computing curves of a given conductor
 \\
 \\
@@ -227,15 +227,17 @@ CubicOrderGenerators1(K,Om)=
 	Form=CubicOrderForm(K,redbasis);
 	answer=[];
 	zk=[redbasis[2],redbasis[3]]; \\print1("#");
-\\	print(Form);
+\\	print("F=",Form," from Om=",Om);
 \\ Follow suggestion of Karim (email 2014-12-28) to avoid run-time
 \\	error with N=6941 at the cost of speed (certification slow)
 \\ -with certification:
 \\	thuevalues=thue(thueinit(Form,1),1);
 \\ -without certification:
-	thuevalues=thue(thueinit(Form,0),1);
-	for(j=1,length(thuevalues),
-	        answer=concat(answer,minpoly(Mod(thuevalues[j]*zk~,K.pol))));
+	thuevalues=iferr(thue(thueinit(Form,0),1),E,E);
+        if(type(thuevalues)=="t_ERROR",
+           print("Error caught in thue() with F = ",Form," : ",thuevalues),
+           for(j=1,length(thuevalues),
+	        answer=concat(answer,minpoly(Mod(thuevalues[j]*zk~,K.pol)))));
 	answer
 };
 
@@ -251,14 +253,16 @@ CubicOrderGenerators2(K,Om)=
 	redbasis=CubicOrderGoodBasis(K,concat(concat([Om[1]],Form[2]~*[Om[2],Om[3]]~)~,Om[4]));
 	answer=[];
 	zk=[redbasis[2],redbasis[3]]; \\print1("*");
-\\	print(Form);
+\\	print("F=",Form[1]," from Om=",Om);
 \\ Follow suggestion of Karim (email 2014-12-28) to avoid run-time error with N=6941
 \\ -with certification:
 \\	thuevalues=thue(thueinit(Form[1],1),1);
 \\ -without certification:
-	thuevalues=thue(thueinit(Form[1],0),1);
-	for(j=1,length(thuevalues),
-	        answer=concat(answer,minpoly(Mod(thuevalues[j]*zk~,K.pol))));
+	thuevalues=iferr(thue(thueinit(Form[1],0),1),E,E);
+        if(type(thuevalues)=="t_ERROR",
+           print("Error caught in thue() with F = ",Form[1]," : ",thuevalues),
+           for(j=1,length(thuevalues),
+                answer=concat(answer,minpoly(Mod(thuevalues[j]*zk~,K.pol)))));
 	answer
 };
 
@@ -381,11 +385,12 @@ CubicOrderSuborderC3(K,Order,p)=
 \\ generators and the last one the discriminant of the order. 
 
 CubicOrderForm(K,R,flag)=
-	{local(goodorder,form);
+	{local(goodorder,form,F);
 	goodorder=CubicOrderGoodBasis(K,R);
 	form=CubicOrderCoordinates(goodorder,lift(goodorder[2]^2*Mod(1,K.pol)));
 	form=concat(form,CubicOrderCoordinates(goodorder,lift(goodorder[3]^2*Mod(1,K.pol))));
-	if(flag==0,-form[3]*x^3+form[2]*x^2-form[6]*x+form[5],-form[3]*x^3+form[2]*x^2*y-form[6]*x*y^2+form[5]*y^3)
+	if(flag==0,F=-form[3]*x^3+form[2]*x^2-form[6]*x+form[5],F=-form[3]*x^3+form[2]*x^2*y-form[6]*x*y^2+form[5]*y^3);
+        if(form[3]>0,-F,F)
 };
 
 \\======================================================================
