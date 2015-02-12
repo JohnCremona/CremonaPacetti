@@ -1,6 +1,6 @@
 \\ ---------------  GP code  ---------------------------------------
 \\
-\\ Time-stamp: <2015-01-25 14:25:09 apacetti>
+\\ Time-stamp: <2015-02-11 22:27:38 apacetti>
 \\ Description: Routine for computing curves of a given conductor
 \\
 \\
@@ -110,62 +110,42 @@ squarefree(N)=
 
 \\======================================================================
 \\ Scripts to compute curves with 2-torsion up to 2-isogeny with the
-\\ new approach of conductor N, given as its factorization (up to
-\\ sign). N is assumed to be an array consisting of pairs [prime,
-\\ exponent].
-
-
-CurvesWith2TorsionofDiscriminant(N)=
-	{local(a,b,Disc,curves,bExponents,n);
-	curves=[];
-	Disc=prod(k=1,length(N),N[k][1]^N[k][2]);
-	bExponents=vector(length(N),k,
-	    if(N[k][1]==2,
-	        if(N[k][2]==5,[0,1],[0]),
-    		if(N[k][2]%2==0,[0,N[k][2]/2],
- 	            if(N[k][2]==3,[0,1],[0]))));
-	b=[1];
-	while(bExponents!=[],
-	    n=length(b);
-	    for(j=1,length(bExponents[length(bExponents)]),
-	        b=concat(b,vector(n,k,b[k]*N[length(bExponents)][1]^bExponents[length(bExponents)][j])));
-	    bExponents=vectorkill(bExponents,length(bExponents)));
-	for(k=1,length(b),
-	    if(issquare(Disc/b[k]^2+4*b[k],&a),curves=concat(curves,x^3+a*x^2+b[k]*x));
-	    if(issquare(Disc/b[k]^2-4*b[k],&a),curves=concat(curves,x^3+a*x^2-b[k]*x));
-	    if(issquare(-Disc/b[k]^2+4*b[k],&a),curves=concat(curves,x^3+a*x^2+b[k]*x));
-	    if(issquare(-Disc/b[k]^2-4*b[k],&a),curves=concat(curves,x^3+a*x^2-b[k]*x)));
-	curves
-};
-
-
-\\======================================================================
+\\ new approach.
 \\ First flag is to use Szpiro or not. Second flag is to compute
 \\ 2-isogenies or not.
 
+/* We consider 2 different cases, whether val_p(b) is even, in which
+ case the valuation of the discriminant is twice that of b, or it is
+ 3, and v_p(Disc)=3. We write the discriminant as Delta=b*A, and run
+ through the divisors A of the Discriminant candidates.  The cases
+ are: -1 meaning valuation 3, the other even exponents valuations (for
+ p \neq 2). At p=2, -2 is case of valuation 4, -1 the case of
+ valuation 5, and the others as before.*/
 
 ComputeCurvesWith2Torsion(N,flag2isogenies,flagConductorsupport)=
-	{local(discbound,primedivisors,answer,V2T,Elred,M);
-	answer=[];M=squarefree(N);
-	primedivisors=factor(2*N)[,1]~;
-	discbound=Vec(factor(SzpiroBound(N))~);
-
-\\	if(flagSzpiro!=0, 
-\\	    discbound=Vec(factor(SzpiroBound(N))~),
-\\	    discbound=[[2,if(N%2!=0,8,24)]];
-\\	    if(N%3==0,discbound=concat(discbound,[[3,18]]));
-\\	    for(l=1,length(primedivisors),if(primedivisors[l]%2!=0&&primedivisors[l]%3!=0,discbound=concat(discbound,[[primedivisors[l],12]]))));
-
-        forvec(X=vector(length(discbound),k,[0,discbound[k][2]]),
-	    answer=concat(answer,CurvesWith2TorsionofDiscriminant(vector(length(primedivisors),k,[primedivisors[k],X[k]]))));
-	answer=Set(answer);
-	for(k=1,length(primedivisors),primedivisors[k]*=kronecker(-1,primedivisors[k]));
-	answer=vector(length(answer),k,Ell(answer[k]));
-	answer=ComputeTwists(answer,primedivisors);
-	V2T=answer; 
+	{local(Szp,Primes,loopvector,b,Delta,curves,A,Div,V2T,answer,Elred,M);
+	b=A=1;curves=[];
+	M=squarefree(N);
+	Szp=factor(SzpiroBound(N));
+	Primes=Szp[,1]~;
+	loopvector=[[-2,Szp[1,2]\2]];
+	loopvector=concat(loopvector,vector(matsize(Szp)[1]-1,k,[-1,Szp[k+1,2]\2]));
+	forvec(X=loopvector,b=A=Div=1;
+	    if(X[1]==-2,b*=2;A*=4,if(X[1]==-1,b*=2;A*=8,b*=Primes[1]^X[1]));
+	    if(X[1]==0,Div*=Primes[1]^Szp[1,2]);
+	    for(j=2,length(X),
+		if(X[j]==-1,b*=Primes[j];A*=Primes[j],
+		    b*=Primes[j]^(X[j]);
+		    if(X[j]==0,Div*=Primes[j]^Szp[j,2])));
+	    fordiv(Div,d,if(issquare(A*d+4*b,&a),curves=concat(curves,x^3+a*x^2+b*x));if(issquare(-A*d+4*b,&a),curves=concat(curves,x^3+a*x^2+b*x));if(issquare(A*d-4*b,&a),curves=concat(curves,x^3+a*x^2-b*x));if(issquare(-A*d-4*b,&a),curves=concat(curves,x^3+a*x^2-b*x))));
+	curves=Set(curves);
+	for(k=1,length(Primes),Primes[k]*=kronecker(-1,Primes[k]));
+	curves=vector(length(curves),k,Ell(curves[k]));
+	curves=ComputeTwists(curves,Primes);
+	V2T=curves; 
 	if(flag2isogenies==0,
-	    for(k=1,length(answer),
-	        V2T=concat(V2T,two_power_isogs(answer[k]))));
+	    for(k=1,length(curves),
+	        V2T=concat(V2T,two_power_isogs(curves[k]))));
 	V2T=Set(V2T); answer=[];
 	for(k=1,length(V2T),Elred=ellglobalred(ellinit(V2T[k]));
 	    if(flagConductorsupport==0,
