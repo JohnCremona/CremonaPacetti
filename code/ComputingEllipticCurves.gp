@@ -16,6 +16,16 @@ read("isogs2.gp");
 \\ Reduction of cubics with negative discriminant
 read("reduce_cubic.gp");
 
+FORDIV(N,seq)=
+{ my(P, E);
+  P = factor(N); E = P[,2]; P = P[,1];
+  forvec( v = vector(#E, i, [0,E[i]]),
+  X = factorback(P, v);
+  seq(X);
+);
+}
+
+
 \\======================================================================
 \\ Exponent bound assuming some explicit Szpiro's conjecture with
 \\ exponent 6.1 and constant 1. Ninfty is the maximum conductor. Note
@@ -137,7 +147,7 @@ ComputeCurvesWith2Torsion(N,flag2isogenies,flagConductorsupport)=
 		if(X[j]==-1,b*=Primes[j];A*=Primes[j],
 		    b*=Primes[j]^(X[j]);
 		    if(X[j]==0,Div*=Primes[j]^Szp[j,2])));
-	    fordiv(Div,d,if(issquare(A*d+4*b,&a),curves=concat(curves,x^3+a*x^2+b*x));if(issquare(-A*d+4*b,&a),curves=concat(curves,x^3+a*x^2+b*x));if(issquare(A*d-4*b,&a),curves=concat(curves,x^3+a*x^2-b*x));if(issquare(-A*d-4*b,&a),curves=concat(curves,x^3+a*x^2-b*x))));
+	    FORDIV(Div,d->if(issquare(A*d+4*b,&a),curves=concat(curves,x^3+a*x^2+b*x));if(issquare(-A*d+4*b,&a),curves=concat(curves,x^3+a*x^2+b*x));if(issquare(A*d-4*b,&a),curves=concat(curves,x^3+a*x^2-b*x));if(issquare(-A*d-4*b,&a),curves=concat(curves,x^3+a*x^2-b*x))));
 	curves=Set(curves);
 	for(k=1,length(Primes),Primes[k]*=kronecker(-1,Primes[k]));
 	curves=vector(length(curves),k,Ell(curves[k]));
