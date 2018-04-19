@@ -10,7 +10,8 @@
 # when S does not contain all primes above 3.
 #
 
-from sage.all import ProjectiveSpace, GF, prod, polygen
+from sage.all import ProjectiveSpace, GF, prod, polygen, proof, ZZ, QQ, PolynomialRing, NumberField
+
 proof.number_field(False)
 
 # Over QQ we can do x.is_S_unit(S) when x is an element but not an
@@ -31,11 +32,73 @@ def is_S_unit(a, S):
     except AttributeError:
         return K.ideal(a).is_S_unit(S)
 
-def unramified_outside_S(L,S):
+def unramified_outside_S(L,S, p=None):
     r"""Return True if the extension L is unramified over its base field K
-    outside the set S of primes of K.
+    outside the set S of primes of K.  If p is not None assume that
+    only primes dividing p need to be tested.
     """
-    return is_S_unit(L.relative_discriminant(),S)
+    # This one-liner works but is slow
+    # return is_S_unit(L.relative_discriminant(),S)
+    debug = False
+    if debug:
+        print("testing ramification of {}".format(L))
+    f = L.defining_polynomial()
+    d = f.discriminant()
+    K = f.base_ring()
+    if p is not None:
+        Kp = K(p)
+        bads = [P for P in K.primes_above(p) if d.valuation(P)>0]
+        if not bads:
+            if debug:
+                print("OK: no bad primes in disc")
+            return True
+        if any(d.valuation(P)%2==1 for P in bads):
+            if debug:
+                print("NO: disc has odd valn at some bad primes in disc")
+            return False
+        if K.absolute_discriminant()%p!=0:
+            if debug:
+                print("computing abs disc of {}-maximal order".format(p))
+            ram = ZZ(p).divides(L.maximal_order([p]).absolute_discriminant())
+            if debug:
+                print("...done, returning {}".format(not ram))
+            return not ram
+        if debug:
+            print("p={} but quick methods failed to give an answer".format(p))
+
+    if K==QQ:
+        D = d
+    else:
+        D = K.ideal(d)
+    for P in S:
+        for _ in range(D.valuation(P)):
+            D /= P
+    # now D is the prime-to-S part of disc(f)
+    if debug:
+        print("Prime-to-S part of disc = {} with norm {}".format(D,D.absolute_norm()))
+    try:
+        bads = D.prime_factors()
+    except AttributeError:
+        bads = D.support()
+    if debug:
+        print("bads = {}".format(bads))
+    if not bads:
+        if debug:
+            print("OK: no bad primes in disc")
+        return True
+    if any(d.valuation(P)%2==1 for P in bads):
+        if debug:
+            print("NO: disc has odd valn at some bad primes in disc")
+        return False
+    # Now d is divisible by one or more primes not in S, to even
+    # powers, and we must work harder to see if L is ramified at these
+    # primes.
+    if debug:
+        print("final check of {} bad primes in disc: {}".format(len(bads), bads))
+    ram = any(any(Q.relative_ramification_index()>1 for Q in L.primes_above(P)) for P in bads)
+    if debug:
+        print("NO" if ram else "OK")
+    return not ram
 
 def selmer_group_projective(K,S,p):
     r"""Return iterator over the nontrivial elements of K(S,p) up to
@@ -44,6 +107,7 @@ def selmer_group_projective(K,S,p):
     K.selmer_group_iterator(S,p) as an option.
     """
     KSgens = K.selmer_group(S=S, m=p)
+    #print("projective Selmer group has dimension {}".format(len(KSgens)))
     for ev in ProjectiveSpace(GF(p),len(KSgens)-1):
         yield prod([q ** e for q, e in zip(KSgens, list(ev))], K.one())
 
@@ -61,7 +125,10 @@ def C2_extensions(K,S):
     """
     x = polygen(K)
     # if some primes above 2 are not in S then a further check is required
-    test = lambda a: True if is_S_unit(K(2),S) else lambda a: unramified_outside_S(K.extension(x**2-a,'t2'))
+    if is_S_unit(K(2),S):
+        test = lambda a: True
+    else:
+        test = lambda a: unramified_outside_S(K.extension(x**2-a,'t2'), S, 2)
     return [x**2-a for a in K.selmer_group_iterator(S,2) if not a.is_square() and test(a)]
 
 ############## C3 (cyclic cubic extensions) ###############################
@@ -77,36 +144,99 @@ def C3_extensions(K,S, verbose=False):
 
     We return polynomials defining the extension rather than the extensions themselves.
     """
+    from KSp import pSelmerGroup
     x = polygen(K)
     if verbose:
         print("finding C3 extensions over {} unramified outside {}".format(K,S))
 
     if K(-3).is_square(): ## K contains cube roots of unity
-        test = lambda a: True if is_S_unit(K(3),S) else lambda a: unramified_outside_S(K.extension(x**3-a,'t3'))
+        if is_S_unit(K(3),S): # primes dividing 3 are in S -- easy case
+            test = lambda a: True
+        else:
+            test = lambda a: unramified_outside_S(K.extension(x**3-a,'t3'), S, 3)
         # use K(S,3), omitting trivial element and only including one element per subgroup:
         return [x**3-a for a in selmer_group_projective(K,S,3) if test(a)]
 
     # now K does not contain the cube roots of unity.  We adjoin them.
     # See AK's thesis Algorithm 3 (page 45)
 
-    K3 = K.extension(x**2+x+1,'z3')
-    S3 = sum([K3.primes_above(P) for P in S],[])
     if verbose:
         print("finding alphas")
-    alphas = [a for a in selmer_group_projective(K3,S3,3) if a.norm(K).is_nth_power(3)]
+
+    # Find downstairs Selmer group:
+    KS3, KS3_gens, from_KS3, to_KS3 = pSelmerGroup(K,S,ZZ(3))
+    if verbose:
+        print("Downstairs 3-Selmer group has dimension {}".format(KS3.dimension()))
+    # Find upstairs Selmer group:
+    K3 = K.extension(x**2+x+1,'z3')
+    nm = lambda p: p if p in ZZ else p.absolute_norm()
+    S3 = sum([K3.primes_above(P) for P in S if nm(P)%3!=2],[])
+    K3S3, K3S3_gens, from_K3S3, to_K3S3 = pSelmerGroup(K3,S3,ZZ(3))
+    if verbose:
+        print("Upstairs 3-Selmer group has dimension {}".format(K3S3.dimension()))
+
+    # construct norm map on these:
+    N = K3S3.hom([to_KS3(from_K3S3(v).norm(K)) for v in K3S3.basis()], KS3)
+    ker = N.kernel()
+    if False:#verbose:
+        print("Norm map: {}".format(N))
+        print("kernel: {}".format(ker))
+    Pker = ProjectiveSpace(ker.dimension()-1,ker.base())
+    alphas = [from_K3S3(ker.linear_combination_of_basis(list(v))) for v in Pker]
+    #alphas = [a for a in selmer_group_projective(K3,S3,3) if a.norm(K).is_nth_power(3)]
     if verbose:
         print("found {} alphas".format(len(alphas)))
+        #print(alphas)
     try:
         traces = [a.trace(K) for a in alphas]
     except TypeError:
         traces = [a.trace() for a in alphas]
+    if verbose: print("computed {} traces".format(len(traces)))
     betas = [a.norm(K).nth_root(3) for a in alphas]
+    if verbose: print("computed {} betas".format(len(betas)))
     polys = [x**3-3*b*x-t for b,t in zip(betas, traces)]
-    fields = [K.extension(f,'t3') for f in polys]
+    if verbose: print("computed {} polys".format(len(polys)))
+    # NB because of the additional extension, these may be ramified at
+    # primes above 3, not all of which are necessarily in S, so we
+    # must check.
+    debug = False
+    check_3 = not is_S_unit(K(3),S)
+    if debug or check_3:
+        fields = [K.extension(f,'t3') for f in polys]
+        if verbose: print("computed fields, checking ramification")
+    if K == QQ:
+        if not (debug or check_3):
+            fields = [K.extension(f,'t3') for f in polys]
+
+        fields = [L.optimized_representation()[0] for L in fields]
+        polys = [L.defining_polynomial() for L in fields]
+
     # (debug) check the fields are not isomorphic (relative to K):
-    # assert all([not any([fields[i].is_isomorphic_relative(fields[j])
-    #                     for j in range(i)]) for i in range(len(fields))])
-    return [f for f,L in zip(polys,fields) if unramified_outside_S(L,S)]
+    if debug:
+        if K==QQ:
+            assert all([not any([fields[i].is_isomorphic(fields[j])
+                                 for j in range(i)]) for i in range(len(fields))])
+        else:
+            assert all([not any([fields[i].is_isomorphic_relative(fields[j])
+                                 for j in range(i)]) for i in range(len(fields))])
+    # the polys we have are already guaranteed to be unramified
+    # outside S, by construction, except possibly at primes dividing 3
+    # not in S.
+    if check_3:
+        polys_and_fields = zip(polys,fields)
+        if verbose:
+            print("Final check of primes dividing 3 not in S")
+        polys_and_fields = [fL for fL in polys_and_fields if unramified_outside_S(fL[1],S,3)]
+        if verbose:
+            print("After final check, {} polys remain".format(len(polys_and_fields)))
+        polys  = [f for f,L in polys_and_fields]
+        fields = [L for f,L in polys_and_fields]
+    if debug:
+        if not polys == [f for f,L in zip(polys,fields) if unramified_outside_S(L,S)]:
+            print("Problem: relative discriminants are {}".format([L.relative_discriminant().factor() for L in fields]))
+        else:
+            if verbose: print("computed unramified polys OK")
+    return polys
 
 ############## S3 (non-cyclic cubic extensions) ###############################
 
@@ -114,15 +244,22 @@ def S3_extensions_with_resolvent(K,S,M, verbose=False):
     r"""Return all S3 extensions of K unramified outside S with quadratic
     resolvent subfield M (which must be unramified outside S too).
 
-    We return a list of cubics h with Galois group S3 and resoplvent field M.
+    We return a list of cubics h with Galois group S3 and resolvent field M.
     """
     if verbose:
         print("finding S3 extensions over {} unramified outside {} with quadratic resolvent {}".format(K,S,M))
     g = [e for e in M.automorphisms() if e(M.gen()) != M.gen()][0]  #the generator of Gal(M/K)
     SM = sum([M.primes_above(p) for p in S],[])
+    # if we add in primes above 3 here then the C3 extension search
+    # need not bother about checking ramification above 3.  We'll do
+    # that later where it will be quick as not so relative.
+    for P in M.primes_above(3):
+        if not P in SM:
+            SM.append(P)
+
     if verbose:
         print("first find C3 extensions of {}".format(M))
-    cubics = C3_extensions(M,SM) #all the cubic extensions of M unramified outside SM
+    cubics = C3_extensions(M,SM,verbose=verbose) #all the cubic extensions of M unramified outside SM
     if verbose:
         print("{} cubics found".format(len(cubics)))
 
@@ -154,7 +291,7 @@ def S3_extensions_with_resolvent(K,S,M, verbose=False):
         if verbose:
             print("f, fbar distinct.  Using y={} with minpoly {}".format(y,y.minpoly()))
         # h is the min poly of y, which is in K[x] when S3 NB if h is
-        # not in K[x] then certailny C6; if h is in K[x] it may be C6
+        # not in K[x] then certainly C6; if h is in K[x] it may be C6
         # and we have to check the discriminant later.
         coeffs = y.minpoly().coefficients(sparse=False)
         if any(c[1]!=0 for c in coeffs):
@@ -188,9 +325,14 @@ def S3_extensions_with_resolvent(K,S,M, verbose=False):
     fields = [L.relativize(e,'a') for L,e in fields_and_embeddings]
     if verbose:
         print("fields (before final test): {}".format(fields))
-    pols_and_fields = [hL for hL in zip(polys,fields) if unramified_outside_S(hL[1],S)]
+    pols_and_fields = [hL for hL in zip(polys,fields)]
+    debug = False
+    pols_and_fields = [hL for hL in pols_and_fields if unramified_outside_S(hL[1],S)]
+
     pols   = [h for h,L in pols_and_fields]
     fields = [L for h,L in pols_and_fields]
+    if K == QQ:
+        pols = [NumberField(pol,'a').optimized_representation()[0].defining_polynomial() for pol in pols]
     if verbose:
         print("polys  (after final test): {}".format(pols))
         print("fields (after final test): {}".format(fields))
@@ -233,12 +375,14 @@ def C4_extensions_with_resolvent(K,S,M, verbose=False):
     """
     if verbose:
         print("finding C4 extensions of {} over {} unramified outside {}".format(K,M,S))
-    g = [e for e in M.automorphisms() if e(M.gen()) != M.gen()][0]  #the generator of Gal(M/K)
     SM = sum([M.primes_above(P) for P in S],[])
     DM = M.defining_polynomial().discriminant()
     x = polygen(K)
     # if some primes above 2 are not in S then a further check is required
-    test = lambda a: True if is_S_unit(M(2),SM) else lambda a: unramified_outside_S(M.extension(x**2-a,'t2'),SM)
+    if is_S_unit(M(2),SM):
+        test = lambda a: True
+    else:
+        test = lambda a: unramified_outside_S(M.extension(x**2-a,'t2'),SM)
     alphas = [a for a in M.selmer_group_iterator(SM,2) if not a.is_square() and (DM*a.relative_norm()).is_square() and test(a)]
     return [x**4-a.trace()*x**2+a.norm(K) for a in alphas]
 
@@ -266,14 +410,14 @@ def A4_extensions_with_resolvent(K,S,M, verbose=False):
         print("finding A4 extensions of {} over {} unramified outside {}".format(K,M,S))
 
     SM = sum([M.primes_above(P) for P in S],[])
-    alphas = [a for a in M.selmer_group_iterator(SM,2) if not a.is_square() and a.norm().is_square()]
+    alphas = [a for a in M.selmer_group_iterator(SM,2) if (not a.is_square()) and a.norm().is_square()]
     def make_quartic(a):
         # a is in the cubic extension M/K and has square norm, so has
-        # minpoly of the form x^3-p*x^2+q*x-r^2.
-        r2, q, p, one = list(a.minpoly())
+        # char poly of the form x^3-p*x^2+q*x-r^2.
+        r2, q, p, one = list(a.charpoly())
         p = -p
         r = (-r2).sqrt()
-        x = polygen(r)
+        x = polygen(K)
         return (x**2-p)**2-8*r*x-4*q
 
     return [make_quartic(a) for a in alphas]

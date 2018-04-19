@@ -20,19 +20,27 @@ def equal_vecs(vv):
                 return [i,j]
     return 0
 
+def primes_iter(K, degree=1):
+    for p in Primes():
+        if K==QQ:
+            yield p
+        else:
+            for P in K.primes_above(p,degree):
+                yield P
+
 # return a prime not dividing N modulo which f is irreducible:
 
-def get_p_1(f,N):
-    for p in Primes():
-        if (N%p) and lam(f,p):
+def get_p_1(K,f,N):
+    for p in primes_iter(K):
+        if not p.divides(N) and lam(f,p):
             return p
     return 0
 
 # return a prime not dividing N modulo exactly one of f,g is irreducible:
 
-def get_p_2(f,g,N):
-    for p in Primes():
-        if (N%p) and lam(f,p)!=lam(g,p):
+def get_p_2(K,f,g,N):
+    for p in primes_iter(K):
+        if not p.divides(N) and lam(f,p)!=lam(g,p):
             return p
     return 0
 
@@ -54,9 +62,9 @@ def get_T0(K,S, flist=None, verbose=False):
     while ij:
         i,j = ij
         if j==n:
-            p = get_p_1(flist[i],N)
+            p = get_p_1(K,flist[i],N)
         else:
-            p = get_p_2(flist[i],flist[j],N)
+            p = get_p_2(K,flist[i],flist[j],N)
         plist = plist + [p]
         if verbose:
             print("plist = {}".format(plist))

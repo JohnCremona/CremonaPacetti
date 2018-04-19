@@ -25,9 +25,12 @@ def primes_iter(K, degree=1):
             for P in K.primes_above(p,degree):
                 yield P
 
-def get_T1(K, S, verbose=False):
+def get_T1(K, S, unit_first=True, verbose=False):
     u = -1 if K==QQ else  K(K.unit_group().torsion_generator())
-    Sx = [P.gens_reduced()[0] for P in S] + [u]
+    if unit_first:
+        Sx = [u] + [P.gens_reduced()[0] for P in S]
+    else:
+        Sx = [P.gens_reduced()[0] for P in S] + [u]
     r = len(Sx)
     N = prod(S,1)
     M = Matrix(GF(2),0,len(Sx))
@@ -52,9 +55,12 @@ def get_T1(K, S, verbose=False):
                 print("T1 increases to {}".format(T1))
     return T1, M
 
-def get_T2(K, S, verbose=False):
+def get_T2(K, S, unit_first=True, verbose=False):
     u = -1 if K==QQ else  K(K.unit_group().torsion_generator())
-    Sx = [u] + [P.gens_reduced()[0] for P in S]
+    if unit_first:
+        Sx = [u] + [P.gens_reduced()[0] for P in S]
+    else:
+        Sx = [P.gens_reduced()[0] for P in S] + [u]
     r = len(Sx)
     r2 = r*(r-1)//2
     N = prod(S,1)
