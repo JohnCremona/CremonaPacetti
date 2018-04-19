@@ -3,6 +3,7 @@ syntax: glob
 
 *~
 *.old
+*.pyc
 
 # Mac cache files
 .DS_Store
