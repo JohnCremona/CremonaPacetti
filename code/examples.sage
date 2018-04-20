@@ -1,7 +1,7 @@
 print("To run the examples, type example1() or example2() or example3() at the Sage prompt")
 
 from C2C3S3 import (C3_extensions, S3_extensions)
-from T0T1T2 import (get_T0, get_T2, algo6)
+from T0T1T2 import (get_T0, get_T2, BlackBox_from_elliptic_curve, algo6)
 from KSp import Support
 
 # The following line means that class groups, etc, are computed
@@ -87,8 +87,8 @@ def example1(shortcut=True, allcurves=False):
         ncurves=10
         print("testing the first {} of {} reducible cases to see if the classes are small or large.   Run example1(allcurves=True) to see all of them.".format(ncurves,nreds))
     for lab in divpols["reducible"][:ncurves]:
-        E = EllipticCurve(lab)
-        res = algo6(S,E,T2)
+        BB = BlackBox_from_elliptic_curve(EllipticCurve(lab))
+        res = algo6(QQ,S,BB,T2)
         if res:
             print("Class {} is small, with discrinminants {} (modulo squares)".format(lab,res))
             discs = Set(E2.discriminant().squarefree_part() for E2 in E.isogeny_class())
@@ -98,10 +98,11 @@ def example1(shortcut=True, allcurves=False):
 
     print("\nExample 1 (continued) from page 31:")
     lab = '43808a'
-    E = EllipticCurve(lab)
     # Simulate the Black Box for this curve:
-    BB = dict([(p,E.ap(p)) for p in T2.values()])
-    print("Isogeny class {} has these Black Box values for primes in T2: {}".format(lab,BB))
+    BB = BlackBox_from_elliptic_curve(EllipticCurve(lab))
+    ap = lambda P: -BB(P)[1]
+    BB_values = dict([(p,ap(p)) for p in T2.values()])
+    print("Isogeny class {} has these ap for primes in T2: {}".format(lab,BB_values))
 
 def example2(shortcut=True):
     print("\n"+"-"*80)
@@ -133,7 +134,7 @@ def example2(shortcut=True):
 
     # To simulate the Black Box we use the elliptic curve 2.0.4.1-3140.3-c1
     E = EllipticCurve(K, [i + 1, -i + 1, 0, 62*i - 22, -192*i - 54])
-    BB = lambda P: E.reduction(P).frobenius_polynomial()
+    BB = BlackBox_from_elliptic_curve(E)
     BB_ap = lambda P: -BB(P)[1]
     # Check for reducibility of the residual representation:
     aps = [BB_ap(P) for P in T0]
@@ -179,7 +180,7 @@ def example3(shortcut=True):
 
     # To simulate the Black Box we use the elliptic curve 2.0.4.1-200.2-a1 (which is isogenous to a base change of 40.a3/Q)
     E = EllipticCurve(K, [i + 1, i, i + 1, -31*i - 44, 94*i + 106])
-    BB = lambda P: E.reduction(P).frobenius_polynomial()
+    BB = BlackBox_from_elliptic_curve(E)
     BB_ap = lambda P: -BB(P)[1]
     # Check for reducibility of the residual representation:
     aps = [BB_ap(P) for P in T0]

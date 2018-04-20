@@ -251,19 +251,7 @@ def get_T2(K, S, unit_first=True, verbose=False):
          T2[ij] = p
    return T2
 
-# Test functions t1 and t2 for the Black Box associated to an elliptic curve E over Q
-
-def t1(E,p):
-    return (1+p-E.ap(p))//2 % 2
-
-def t2(E,p):
-    return (1+p-E.ap(p))//4 % 2
-
-#############################################################################
-#                                                                           #
-# Implementation of Algorithm 6 (page 22) for an elliptic curve Black Box   #
-#                                                                           #
-#############################################################################
+###############################################################
 
 # We have not implemented a class in Sage for general Black Box Galois
 # Representations, though it would be good to do so, allowing as input
@@ -272,22 +260,38 @@ def t2(E,p):
 # either Traces of Frobenius for an elliptic curve or Hecke
 # eigenvalues for a modular form.  One day we will.
 
+# To simulate a Black Box for the examples, all we need is a function
+# which returns a monic quadratic (characteristic polynomial of
+# Frobenius) on being given a prime.  We can construct such a function
+# easily from an elliptic curve. (This will raise an error if given a
+# prime of bad reduction.)
+
+def BlackBox_from_elliptic_curve(E):
+   return lambda p: E.reduction(p).frobenius_polynomial()
+
+#############################################################################
+#                                                                           #
+# Implementation of Algorithm 6 (page 22) for an elliptic curve Black Box   #
+#                                                                           #
+#############################################################################
+
 # Meanwhile, the following function takes as in put S and an elliptic
 # curve E with 2-torsion, and returns
 #
 # either: False (if the BT tree is large)
 # or: Dx, Dy (if the BT tree is small with vertex discriminants Dx, Dy)
 
-def algo6(S,E, T2=None, verbose=False):
-    print(E.label())
+def algo6(K,S,BB, T2=None, verbose=False):
     r = 1+len(S)
     if T2 is None:
-       T2 = get_T2(QQ,S)
+       T2 = get_T2(K,S)
        if verbose:
           print("T2 = {}".format(T2))
     assert len(T2)==r*(r+1)//2
-    apdict = dict((k,E.ap(T2[k])) for k in T2)
-    t1dict = dict((k,t1(E,T2[k])) for k in T2)
+    ap = lambda P: -BB(P)[1]
+    apdict = dict((k,ap(T2[k])) for k in T2)
+    t1 = lambda P: (BB(P)(1)//2)%2
+    t1dict = dict((k,t1(T2[k])) for k in T2)
     if verbose:
        print("apdict = {}".format(apdict))
        print("t1dict = {}".format(t1dict))
@@ -331,3 +335,50 @@ def algo6(S,E, T2=None, verbose=False):
        print("Delta_y = {}".format(Dy))
     return Dx, Dy
 
+""" The following is unfinished
+ def algo63_det_trivial(S,BB, T2=None, verbose=False):
+    r = 1+len(S)
+    if T2 is None:
+       T2 = get_T2(QQ,S)
+       if verbose:
+          print("T2 = {}".format(T2))
+   assert len(T2)==r*(r+1)//2
+   ap = lambda P: -BB(P)[1]
+   apdict = dict((k,ap(T2[k])) for k in T2)
+   t2 = lambda P: (BB(P)(1)//4)%2
+   t2dict = dict((k,t2(T2[k])) for k in T2)
+   if verbose:
+      print("apdict = {}".format(apdict))
+      print("t2dict = {}".format(t2dict))
+   v = vector(GF(2),[t2dict[Set([i])] for i in range(r)])
+   if verbose:
+      print("v = {}".format(v))
+   def w(i,j):
+      if i==j:
+         return 0
+      else:
+         return (t2dict[Set([i,j])] + t2dict[Set([i])] + t2dict[Set([j])])
+
+   def vec_to_disc(vec):
+      return prod([D for D,c in zip(Sx,list(x)) if c])
+
+   W = Matrix(GF(2),[[w(i,j) for j in range(r)] for i in range(r)])
+   rkW = W.rank()
+   if verbose:
+      print("W = {} with rank rkW".format(W,rkW))
+   # Case 1: rank(W)=2
+   if rkW==0:
+      # find two distinct nonzero rows of W
+      Wrows = [W.row(i) for i in range(r)]
+      Wrows = [wr for wr in Wrows if wr]
+      x = Wrows[0]
+      y = [wr for wr in Wrows if wr!=x][0]
+      u = v - vector(xi*yi for xi,yi in zip(list(x),list(y)))
+      Delta_a = Delta_d = vec_to_disc(u)
+      Delta_b = vec_to_disc(x)
+      Delta_c = vec_to_disc(y)
+
+   else: # W==0
+      u = v
+
+"""
