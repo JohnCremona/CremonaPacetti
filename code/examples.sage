@@ -1,3 +1,5 @@
+print("To run the examples, type example1() or example2() or example3() at the Sage prompt")
+
 from C2C3S3 import (C3_extensions, S3_extensions)
 from T0T1T2 import (get_T0, get_T2, algo6)
 from KSp import Support
