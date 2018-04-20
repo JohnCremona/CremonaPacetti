@@ -95,14 +95,15 @@ def get_T0(K,S, flist=None, verbose=False):
 
 # Append the reducible cubic
    x = polygen(K)
-   flist0 = flist + [x^3]
+   flist0 = flist + [x**3]
    n = len(flist)
 
 # Starting with no primes, compute the lambda matrix
    plist = []
    vlist = [lamvec(f,plist) for f in flist0]
    ij = equal_vecs(vlist)
-   print("With plist={}, vlist={}, ij={}".format(plist,vlist,ij));
+   if verbose:
+      print("With plist={}, vlist={}, ij={}".format(plist,vlist,ij));
    N = prod(S,1)
 # As long as the vectors in vlist are not all distinct, find two
 # indices i,j for which they are the same and find a new prime which
@@ -118,7 +119,8 @@ def get_T0(K,S, flist=None, verbose=False):
          print("plist = {}".format(plist))
       vlist = [lamvec(f,plist) for f in flist0]
       ij = equal_vecs(vlist)
-      print("With plist={}, vlist={}, ij={}".format(plist,vlist,ij));
+      if verbose:
+         print("With plist={}, vlist={}, ij={}".format(plist,vlist,ij));
    vlist = vlist[:-1]
 
    return flist, plist, vlist
@@ -140,7 +142,7 @@ def alpha(p,D):
    # Over Q we just compute the kronecker symbol, returning 0 if it
    # equals 1 and 1 if it equals -1:
    if p in ZZ:
-      return ((1-D.kronecker(p))//2) % 2
+      return ((1-ZZ(D).kronecker(p))//2) % 2
 
    # Otherwise we retrieve the field K (here p may be a prime ideal or a prime element)
    try:
@@ -150,7 +152,7 @@ def alpha(p,D):
 
    # and count how many primes in K lie above p:
    x = polygen(K)
-   L = K.extension(x^2-D,'b')
+   L = K.extension(x**2-D,'b')
    return 2-len(L.primes_above(p))
 
 # Vector version of alpha, over a list of D's:
@@ -173,10 +175,12 @@ def alphalist(p, Dlist):
 def get_T1(K, S, unit_first=True, verbose=False):
 # Sx is a list of generators of K(S,2) with the unit first or last, assuming h(K)=1
    u = -1 if K==QQ else  K(K.unit_group().torsion_generator())
+   from KSp import IdealGenerator
+   Sx = [IdealGenerator(P) for P in S]
    if unit_first:
-      Sx = [u] + [P.gens_reduced()[0] for P in S]
+      Sx = [u] + Sx
    else:
-      Sx = [P.gens_reduced()[0] for P in S] + [u]
+      Sx = Sx + [u]
    r = len(Sx)
    N = prod(S,1)
 # Initialize T1 to be empty and A to be a matric with 0 rows and r=#Sx columns
@@ -220,10 +224,12 @@ def get_T1(K, S, unit_first=True, verbose=False):
 
 def get_T2(K, S, unit_first=True, verbose=False):
    u = -1 if K==QQ else  K(K.unit_group().torsion_generator())
+   from KSp import IdealGenerator
+   Sx = [IdealGenerator(P) for P in S]
    if unit_first:
-      Sx = [u] + [P.gens_reduced()[0] for P in S]
+      Sx = [u] + Sx
    else:
-      Sx = [P.gens_reduced()[0] for P in S] + [u]
+      Sx = Sx + [u]
    r = len(Sx)
    r2 = r*(r-1)//2
    N = prod(S,1)
@@ -272,25 +278,30 @@ def t2(E,p):
 # either: False (if the BT tree is large)
 # or: Dx, Dy (if the BT tree is small with vertex discriminants Dx, Dy)
 
-def algo6(S,E):
+def algo6(S,E, T2=None, verbose=False):
     print(E.label())
     r = 1+len(S)
-    T2 = get_T2(S)
+    if T2 is None:
+       T2 = get_T2(QQ,S)
+       if verbose:
+          print("T2 = {}".format(T2))
     assert len(T2)==r*(r+1)//2
-    print("T2 = {}".format(T2))
     apdict = dict((k,E.ap(T2[k])) for k in T2)
     t1dict = dict((k,t1(E,T2[k])) for k in T2)
-    print("apdict = {}".format(apdict))
-    print("t1dict = {}".format(t1dict))
+    if verbose:
+       print("apdict = {}".format(apdict))
+       print("t1dict = {}".format(t1dict))
     v = vector(GF(2),[t1dict[Set([i])] for i in range(r)])
-    print("v = {}".format(v))
+    if verbose:
+       print("v = {}".format(v))
     def w(i,j):
         if i==j:
             return 0
         else:
             return (t1dict[Set([i,j])] + t1dict[Set([i])] + t1dict[Set([j])])
     W = Matrix(GF(2),[[w(i,j) for j in range(r)] for i in range(r)])
-    print("W = {}".format(W))
+    if verbose:
+       print("W = {}".format(W))
     if v==0 and W==0:
         return False
     if W==0:
@@ -309,12 +320,14 @@ def algo6(S,E):
                 if y!=z:
                     break
             x = y+z
-    print("x = {}".format(x))
-    print("y = {}".format(y))
+    if verbose:
+       print("x = {}".format(x))
+       print("y = {}".format(y))
     Sx = [-1] + S
     Dx = prod([D for D,c in zip(Sx,list(x)) if c])
     Dy = prod([D for D,c in zip(Sx,list(y)) if c])
-    print("Delta_x = {}".format(Dx))
-    print("Delta_y = {}".format(Dy))
+    if verbose:
+       print("Delta_x = {}".format(Dx))
+       print("Delta_y = {}".format(Dy))
     return Dx, Dy
 

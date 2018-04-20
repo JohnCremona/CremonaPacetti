@@ -81,7 +81,11 @@ def unramified_outside_S(L,S, p=None, debug=False):
     d = f.discriminant()
     K = f.base_ring()
     if p is not None:
-        bads = [P for P in K.primes_above(p) if d.valuation(P)>0]
+        p = ZZ(p)
+        if K==QQ:
+            bads = [p] if p.divides(d) else []
+        else:
+            bads = [P for P in K.primes_above(p) if d.valuation(P)>0]
         if not bads:
             if debug:
                 print("OK: no bad primes in disc")
@@ -129,10 +133,18 @@ def unramified_outside_S(L,S, p=None, debug=False):
     # primes.
     if debug:
         print("final check of {} bad primes in disc: {}".format(len(bads), bads))
-    ram = any(any(Q.relative_ramification_index()>1 for Q in L.primes_above(P)) for P in bads)
+    for P in bads:
+        if debug:
+            print("Testing whether {} is ramified in L".format(P))
+        for Q in L.primes_above(P):
+            e = Q.relative_ramification_index()
+            if e>1:
+                if debug:
+                    print("NO")
+                return False
     if debug:
-        print("NO" if ram else "OK")
-    return not ram
+        print("OK")
+    return True
 
 ############## C2 (quadratic extensions) ###############################
 
@@ -414,24 +426,20 @@ def S3_extensions_with_resolvent(K,S,M, verbose=False):
     if bad_h:
         print("error in S3_extensions_with_resolvent(), M={}, returning reducible polynomial(s) {}!".format(M, bad_h))
     if verbose:
-        print("polys (before final test): {}".format(polys))
+        print("{} polys (before final test): {}".format(len(polys),polys))
 
-    # For each poly in the list we construct its splitting field:
-    fields_and_embeddings = [h.splitting_field('a',map=True) for h in polys]
-    fields = [L.relativize(e,'a') for L,e in fields_and_embeddings]
-    if verbose:
-        print("fields (before final test): {}".format(fields))
-    pols_and_fields = [hL for hL in zip(polys,fields)]
-    pols_and_fields = [hL for hL in pols_and_fields if unramified_outside_S(hL[1],S)]
-
-    pols   = [h for h,L in pols_and_fields]
-    fields = [L for h,L in pols_and_fields]
+    good_polys = []
+    for h in polys:
+        L = K.extension(h,'t2')
+        if unramified_outside_S(L,S,debug=False):
+            good_polys.append(h)
     if K == QQ:
-        pols = [NumberField(pol,'a').optimized_representation()[0].defining_polynomial() for pol in pols]
+        polys = [NumberField(pol,'a').optimized_representation()[0].defining_polynomial() for pol in good_polys]
+    else:
+        polys = good_polys
     if verbose:
-        print("polys  (after final test): {}".format(pols))
-        print("fields (after final test): {}".format(fields))
-    return pols
+        print("polys  (after final test): {}".format(polys))
+    return polys
 
 def S3_extensions(K,S, verbose=False):
     r"""Return all S3 extensions of K unramified outside S.
