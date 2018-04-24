@@ -88,7 +88,7 @@ def get_p_2(K,f,g,N):
 def get_T0(K,S, flist=None, verbose=False):
    # Compute all cubics unramified outside S if not supplied:
    if flist == None:
-      from C2C3S3.py import C3S3_extensions
+      from C2C3S3 import C3S3_extensions
       flist = C3S3_extensions(K,S)
    if verbose:
       print("cubics: {}".format(flist))
@@ -269,116 +269,270 @@ def get_T2(K, S, unit_first=True, verbose=False):
 def BlackBox_from_elliptic_curve(E):
    return lambda p: E.reduction(p).frobenius_polynomial()
 
+def BB_trace(BB):
+   return lambda p: -BB(p)[1]
+
+def BB_det(BB):
+   return lambda p: BB(p)[0]
+
+def BB_t0(BB):
+   return lambda p: BB(p)(1)%2
+
+def BB_t1(BB):
+   return lambda p: (BB(p)(1)//2)%2
+
+def BB_t2(BB):
+   return lambda p: (BB(p)(1)//4)%2
+
+def BB_t4(BB):
+   return lambda p: (BB(p)(1)//16)%2
+
+
+
 #############################################################################
 #                                                                           #
 # Implementation of Algorithm 6 (page 22) for an elliptic curve Black Box   #
 #                                                                           #
 #############################################################################
 
-# Meanwhile, the following function takes as in put S and an elliptic
-# curve E with 2-torsion, and returns
+# This function takes as input a dictionary with values in GF(2) and
+# keys all singletons{i} and doubletons {i,j} with i,j in range(n),
+# and returns
+#
+# *either* two nonzero vectors x, y in GF(2)^n such that the
+# dictionary values are x[i]*y[i] and (x[i]+x[j])*(y[i]+y[j]),
+#
+# *or* 0 if the only solutions have x=0 or y=0.
+
+def solve_vectors(n,d, verbose=False):
+   def w(i,j):
+      return 0 if i==j else (d[Set([i,j])] + d[Set([i])] + d[Set([j])])
+   W = Matrix(GF(2),[[w(i,j) for j in range(n)] for i in range(n)])
+   v = vector(GF(2),[d[Set([i])] for i in range(n)])
+   if verbose:
+      print("W = {}".format(W))
+      print("v = {}".format(v))
+   if W==0:
+      if v==0:
+         return 0
+      else:
+         return v, v
+
+   Wrows = [wr for wr in W.rows() if wr]
+   if v==0:
+      x = Wrows[0]
+      y = next(wr for wr in Wrows[1:] if wr!=x)
+      return x, y
+
+   z = W.row(v.support()[0])
+   y = next(wr for wr in Wrows if wr!=z)
+   return y+z, y
+
+# Function which maps a GF(2)-vector of exponents to the corresponding discriminant:
+
+def vec_to_disc(basis, exponents):
+   return prod([D for D,c in zip(basis,list(exponents)) if c])
+
+# The following function takes as in put S and Black Box (assumed to
+# have reducible residual representation, i.e. BB(P)(1)=0 (mod 2) for
+# all P not in S), and returns
 #
 # either: False (if the BT tree is large)
 # or: Dx, Dy (if the BT tree is small with vertex discriminants Dx, Dy)
 
-def algo6(K,S,BB, T2=None, verbose=False):
-    r = 1+len(S)
-    if T2 is None:
-       T2 = get_T2(K,S)
-       if verbose:
-          print("T2 = {}".format(T2))
-    assert len(T2)==r*(r+1)//2
-    ap = lambda P: -BB(P)[1]
-    apdict = dict((k,ap(T2[k])) for k in T2)
-    t1 = lambda P: (BB(P)(1)//2)%2
-    t1dict = dict((k,t1(T2[k])) for k in T2)
-    if verbose:
-       print("apdict = {}".format(apdict))
-       print("t1dict = {}".format(t1dict))
-    v = vector(GF(2),[t1dict[Set([i])] for i in range(r)])
-    if verbose:
-       print("v = {}".format(v))
-    def w(i,j):
-        if i==j:
-            return 0
-        else:
-            return (t1dict[Set([i,j])] + t1dict[Set([i])] + t1dict[Set([j])])
-    W = Matrix(GF(2),[[w(i,j) for j in range(r)] for i in range(r)])
-    if verbose:
-       print("W = {}".format(W))
-    if v==0 and W==0:
-        return False
-    if W==0:
-        x = y = v
-    else:
-        Wrows = [W.row(i) for i in range(r)]
-        Wrows = [wr for wr in Wrows if wr]
-        if v==0:
-            x = Wrows[0]
-            for y in Wrows[1:]:
-                if y!=x:
-                    break
-        else:
-            z = W.row(v.support()[0])
-            for y in Wrows:
-                if y!=z:
-                    break
-            x = y+z
-    if verbose:
+def algo6(K,S,BB, T2=None, unit_first = True, verbose=False):
+   r = 1+len(S)
+   if T2 is None:
+      T2 = get_T2(K,S, unit_first)
+      if verbose:
+         print("T2 = {}".format(T2))
+   assert len(T2)==r*(r+1)//2
+
+   from KSp import IdealGenerator
+   Sx = [IdealGenerator(P) for P in S]
+   u = -1 if K==QQ else  K(K.unit_group().torsion_generator())
+   Sx = [u] + Sx if unit_first else Sx+[u]
+   if verbose:
+      print("Basis for K(S,2): {}".format(Sx))
+
+   ap = BB_trace(BB)
+   apdict = dict((k,ap(T2[k])) for k in T2)
+   t1 = BB_t1(BB)
+   t1dict = dict((k,t1(T2[k])) for k in T2)
+   if verbose:
+      print("apdict = {}".format(apdict))
+      print("t1dict = {}".format(t1dict))
+
+   s = solve_vectors(r, t1dict)
+   if not s:
+      return False
+   x, y = s
+   if verbose:
        print("x = {}".format(x))
        print("y = {}".format(y))
-    Sx = [-1] + S
-    Dx = prod([D for D,c in zip(Sx,list(x)) if c])
-    Dy = prod([D for D,c in zip(Sx,list(y)) if c])
-    if verbose:
-       print("Delta_x = {}".format(Dx))
-       print("Delta_y = {}".format(Dy))
-    return Dx, Dy
 
-""" The following is unfinished
- def algo63_det_trivial(S,BB, T2=None, verbose=False):
-    r = 1+len(S)
-    if T2 is None:
-       T2 = get_T2(QQ,S)
-       if verbose:
-          print("T2 = {}".format(T2))
+   Dx = vec_to_disc(Sx, x)
+   Dy = vec_to_disc(Sx, y)
+   if verbose:
+      print("Delta_x = {}".format(Dx))
+      print("Delta_y = {}".format(Dy))
+   return Dx, Dy
+
+# The following are not yet general.  We implement section 6.3
+# (trivial det mod 2^{k+1}) only for k=1, as required for Examples 2
+# and 3, and section 6.4 (nontrivial det mod 2^{k+1}) only for k=2, as
+# required for Example 3.
+
+def algo63(K, S, BB, T2=None, unit_first = True, verbose=False):
+   r = 1+len(S)
+   if T2 is None:
+      T2 = get_T2(QQ,S, unit_first)
+      if verbose:
+         print("T2 = {}".format(T2))
    assert len(T2)==r*(r+1)//2
-   ap = lambda P: -BB(P)[1]
+
+   from KSp import IdealGenerator
+   Sx = [IdealGenerator(P) for P in S]
+   u = -1 if K==QQ else  K(K.unit_group().torsion_generator())
+   Sx = [u] + Sx if unit_first else Sx+[u]
+   if verbose:
+      print("Basis for K(S,2): {}".format(Sx))
+
+   BBdict = dict((k,BB(T2[k])) for k in T2)
+   ap = BB_trace(BB)
    apdict = dict((k,ap(T2[k])) for k in T2)
-   t2 = lambda P: (BB(P)(1)//4)%2
+   t2 = BB_t2(BB)
    t2dict = dict((k,t2(T2[k])) for k in T2)
    if verbose:
       print("apdict = {}".format(apdict))
       print("t2dict = {}".format(t2dict))
+
    v = vector(GF(2),[t2dict[Set([i])] for i in range(r)])
    if verbose:
       print("v = {}".format(v))
+
    def w(i,j):
       if i==j:
          return 0
       else:
          return (t2dict[Set([i,j])] + t2dict[Set([i])] + t2dict[Set([j])])
 
-   def vec_to_disc(vec):
-      return prod([D for D,c in zip(Sx,list(x)) if c])
-
    W = Matrix(GF(2),[[w(i,j) for j in range(r)] for i in range(r)])
    rkW = W.rank()
    if verbose:
-      print("W = {} with rank rkW".format(W,rkW))
+      print("W = \n{} with rank {}".format(W,rkW))
    # Case 1: rank(W)=2
-   if rkW==0:
-      # find two distinct nonzero rows of W
-      Wrows = [W.row(i) for i in range(r)]
-      Wrows = [wr for wr in Wrows if wr]
+   if rkW==2:
+      # x and y are any two distinct nonzero rows of W
+      Wrows = [wr for wr in W.rows() if wr]
       x = Wrows[0]
-      y = [wr for wr in Wrows if wr!=x][0]
+      y = next(wr for wr in Wrows if wr!=x)
+      z = x+y
       u = v - vector(xi*yi for xi,yi in zip(list(x),list(y)))
-      Delta_a = Delta_d = vec_to_disc(u)
-      Delta_b = vec_to_disc(x)
-      Delta_c = vec_to_disc(y)
-
+      if verbose:
+         print("x = {}".format(x))
+         print("y = {}".format(y))
+         print("z = {}".format(z))
+         print("u = {}".format(u))
    else: # W==0
+      # y=0, x=z
       u = v
+      y = u-u # zero vector
+      if verbose:
+         print("u = {}".format(u))
+         print("y = {}".format(y))
+      t3dict = {}
+      for k in T2:
+         t = 1 if t2dict[k]==0 else -1
+         t3dict[k] = (BBdict[k](t)//8)%2
+      s = solve_vectors(r,t3dict)
+      if not s:
+         z = x = y # = 0
+         if verbose:
+            print("x and  y are both zero, so class has >4 vertices")
+      else:
+         x, _ = s
+         z = x
+         if verbose:
+            print("x = {}".format(x))
+            print("y = {}".format(y))
+            print("z = {}".format(z))
 
-"""
+   return [vec_to_disc(Sx,vec) for vec in [u,x,y,z]]
+
+def algo64(K, S, BB, T2=None, unit_first = True, verbose=False):
+   r = 1+len(S)
+   if T2 is None:
+      T2 = get_T2(QQ,S, unit_first)
+      if verbose:
+         print("T2 = {}".format(T2))
+   assert len(T2)==r*(r+1)//2
+
+   from KSp import IdealGenerator
+   Sx = [IdealGenerator(P) for P in S]
+   u = -1 if K==QQ else  K(K.unit_group().torsion_generator())
+   Sx = [u] + Sx if unit_first else Sx+[u]
+   if verbose:
+      print("Basis for K(S,2): {}".format(Sx))
+
+   BBdict = dict((k,BB(T2[k])) for k in T2)
+   ap = BB_trace(BB)
+   apdict = dict((k,ap(T2[k])) for k in T2)
+   t4 = BB_t4(BB)
+   t4dict = dict((k,t4(T2[k])) for k in T2)
+   if verbose:
+      print("apdict = {}".format(apdict))
+      print("t4dict = {}".format(t4dict))
+
+   v = vector(GF(2),[t4dict[Set([i])] for i in range(r)])
+   if verbose:
+      print("v = {}".format(v))
+
+   def w(i,j):
+      if i==j:
+         return 0
+      else:
+         return (t4dict[Set([i,j])] + t4dict[Set([i])] + t4dict[Set([j])])
+
+   # Note that W ignores the first coordinate
+   Wd = Matrix(GF(2),[[w(i,j) for j in range(1,r)] for i in range(1,r)])
+   vd = vector(v.list()[1:])
+   rkWd = Wd.rank()
+   if verbose:
+      print("W' = \n{} with rank {}".format(Wd,rkWd))
+   # Case 1: rank(W)=2
+   if rkWd==2:
+      # x' and y' are any two distinct nonzero rows of W
+      Wrows = [wr for wr in Wd.rows() if wr]
+      xd = Wrows[0]
+      yd = next(wr for wr in Wrows if wr!=xd)
+      zd = xd+yd
+      ud = vd - vector(xi*yi for xi,yi in zip(list(xd),list(yd)))
+      if verbose:
+         print("x' = {}".format(xd))
+         print("y' = {}".format(yd))
+         print("z' = {}".format(zd))
+         print("u' = {}".format(ud))
+         print("v' = {}".format(vd))
+
+      u = vector([1]+ud.list())
+      v = vector([0]+vd.list())
+
+      if t4dict[Set([0])]==1:
+         x = vector([1]+xd.list())
+         y = vector([1]+yd.list())
+         z = vector([1]+zd.list())
+         if verbose:
+            print("x = {}".format(x))
+            print("y = {}".format(y))
+            print("z = {}".format(z))
+            print("u = {}".format(u))
+            print("v = {}".format(v))
+      else:
+         raise NotImplementedError("t_4(p_1) case not yet implemented in algo64")
+
+      return [vec_to_disc(Sx,vec) for vec in [u,x,y,z]]
+
+   # W==0
+   raise NotImplementedError("rank(W)=0 case not yet implemented in algo64")
+

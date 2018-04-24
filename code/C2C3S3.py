@@ -80,29 +80,6 @@ def unramified_outside_S(L,S, p=None, debug=False):
     f = L.defining_polynomial()
     d = f.discriminant()
     K = f.base_ring()
-    if p is not None:
-        p = ZZ(p)
-        if K==QQ:
-            bads = [p] if p.divides(d) else []
-        else:
-            bads = [P for P in K.primes_above(p) if d.valuation(P)>0]
-        if not bads:
-            if debug:
-                print("OK: no bad primes in disc")
-            return True
-        if any(d.valuation(P)%2==1 for P in bads):
-            if debug:
-                print("NO: disc has odd valn at some bad primes in disc")
-            return False
-        if K.absolute_discriminant()%p!=0:
-            if debug:
-                print("computing abs disc of {}-maximal order".format(p))
-            ram = ZZ(p).divides(L.maximal_order([p]).absolute_discriminant())
-            if debug:
-                print("...done, returning {}".format(not ram))
-            return not ram
-        if debug:
-            print("p={} but quick methods failed to give an answer".format(p))
 
     if K==QQ:
         D = d
@@ -114,10 +91,15 @@ def unramified_outside_S(L,S, p=None, debug=False):
     # now D is the prime-to-S part of disc(f)
     if debug:
         print("Prime-to-S part of disc = {} with norm {}".format(D,D.absolute_norm()))
+
     try:
         bads = D.prime_factors()
     except AttributeError:
         bads = D.support()
+
+    if p is not None:
+        p = K(p)
+        bads = [P for P in bads if p.valuation(P)>0]
     if debug:
         print("bads = {}".format(bads))
     if not bads:
@@ -428,15 +410,14 @@ def S3_extensions_with_resolvent(K,S,M, verbose=False):
     if verbose:
         print("{} polys (before final test): {}".format(len(polys),polys))
 
-    good_polys = []
-    for h in polys:
-        L = K.extension(h,'t2')
-        if unramified_outside_S(L,S,debug=False):
-            good_polys.append(h)
+    # The only remaining check is that the extensions L/K might be ramified at primes above 3 if these are not all in S.
+    check_3 = not is_S_unit(K(3),S)
+    if check_3:
+        polys = [h for h in polys if unramified_outside_S(K.extension(h,'t2'),S,3)]
+
     if K == QQ:
-        polys = [NumberField(pol,'a').optimized_representation()[0].defining_polynomial() for pol in good_polys]
-    else:
-        polys = good_polys
+        polys = [NumberField(h,'a').optimized_representation()[0].defining_polynomial() for h in polys]
+
     if verbose:
         print("polys  (after final test): {}".format(polys))
     return polys
