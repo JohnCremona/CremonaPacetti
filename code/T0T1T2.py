@@ -1,5 +1,27 @@
-# Sagemath code to compute the sets T0, T1 and T2 as defined in
-#  Cremona and Argaez "Black Box Galois Representations"
+# T0T1T2.py: code implementing some 2-adic Black Box Galois Representation algorithms
+
+#######################################################################
+#
+# Copyright 2018 John Cremona
+#
+# This is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at your
+# option) any later version.
+#
+# This code is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this file; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+#
+#######################################################################
+
+# This file contains SageMath code to compute the sets T0, T1 and T2
+#  as defined in Argaez and Cremona "Black Box Galois Representations"
 #
 # Requires the file C2C3S3.py from which the function
 # C3S3_extensions() is imported, and that file requires KSp.py

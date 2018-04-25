@@ -1,3 +1,36 @@
+# examples.sage: code to compute the examples in the paper "Black Box
+#  Galois Representations" by Argaez and Cremona
+
+#######################################################################
+#
+# Copyright 2018 John Cremona
+#
+# This is free software; you can redistribute it and/or modify it
+# under the terms of the GNU General Public License as published by the
+# Free Software Foundation; either version 2 of the License, or (at your
+# option) any later version.
+#
+# This code is distributed in the hope that it will be useful, but WITHOUT
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+# FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+# for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this file; if not, write to the Free Software Foundation,
+# Inc., 51 Franklin St, Fifth Floor, Boston, MA 02110-1301, USA
+#
+#######################################################################
+
+#
+# The files KSp.py, C2C3S3.py and T0T1T2.py should be available for
+# import (e.g. they should be in the same directory as this).  Start
+# Sage from the command line, type the command
+#
+# %runfile examples.sage
+#
+# and then follow the instructions.
+#
+
 print("To run the examples, type example1() or example2() or example3() at the Sage prompt")
 
 from C2C3S3 import (C3_extensions, S3_extensions)
