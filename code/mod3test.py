@@ -28,17 +28,27 @@ def read_data(filename='mod-3-reps.txt'):
 
 from T0T1T2 import get_T1
 from T0mod3 import get_T0_mod3
-from S4 import abs_irred_extensions_with_quadratic
+from S4 import abs_irred_extensions_with_quadratic, irred_extensions_with_quadratic
 
 # Process a single form data packet:
+
+quartic_lists = {}
+def get_quartics(S, D):
+    global quartic_lists
+    SS = tuple(S)
+    if not (SS,D) in quartic_lists:
+        quartic_lists[(SS,D)] = irred_extensions_with_quadratic(QQ,S,QuadraticField(D))
+    return quartic_lists[(SS,D)]
 
 def check1form(data, verbose=False):
     N = ZZ(data['N'])
     S = (3*N).prime_divisors()
     k = data['k']
+    d = data['d']
     if verbose:
         print("N = {}".format(N))
         print("k = {}".format(k))
+        print("d = {}".format(d))
         print("S = {}".format(S))
 
     # compute the determinant character
@@ -56,7 +66,8 @@ def check1form(data, verbose=False):
     # Since these are odd representations, the discriminant will
     # always be negative, and in particular not 1:
     assert D<0
-    quartics = abs_irred_extensions_with_quadratic(QQ,S,QuadraticField(D))
+    #quartics = abs_irred_extensions_with_quadratic(QQ,S,QuadraticField(D))
+    quartics = irred_extensions_with_quadratic(QQ,S,QuadraticField(D))
     if verbose:
         print("candidate irreducible quartics: {}".format(quartics))
     _, T0, vlist = get_T0_mod3(QQ,S,quartics)
@@ -71,15 +82,16 @@ def check1form(data, verbose=False):
     if v in vlist:
         i = vlist.index(v)
         pol = quartics[i]
-        gal = 'S4' if pol.galois_group().id()==[24,12] else 'D4'
+        id = pol.galois_group().id()
+        gal = 'S4' if id==[24,12] else 'C4' if id==[4,1] else 'D4'
         if verbose:
-            print("Irreducible: splitting field polynomial = {}".format(pol))
+            print("Irreducible: splitting field polynomial = {} with group {}".format(pol,gal))
             print("----------------------------------------------------------")
-        return N,k,'irreducible', pol, gal
+        return data,'irreducible', pol, gal
     if verbose:
         print("Reducible")
         print("----------------------------------------------------------")
-    return N,k,'reducible'
+    return data,'reducible'
 
 # 13 irreducible, all S4
 # 17 reducible
@@ -87,7 +99,7 @@ def check1form(data, verbose=False):
 def run():
     alldata = read_data()
     print("finished reading data")
-    res = [check1form(data) for data in alldata]
+    res = [check1form(data, verbose=False) for data in alldata]
     print("finished checking")
     reds = [r for r in res if 'reducible' in r]
     nreds = len(reds)
@@ -97,14 +109,21 @@ def run():
     S4s = [r for r in res if 'S4' in r]
     nS4 = len(S4s)
     print("{} forms are irreducible with splitting field S4:".format(nS4))
-    for r in S4s:
-        pol = r[3]
+    def display(r):
+        pol = r[2]
         disc = NumberField(pol,'a').discriminant().factor()
-        print("N={}, k={}, polynomial={} defining field with discriminant {}".format(r[0],r[1],r[3],disc))
+        data = r[0]
+        print("N={}, k={}, d={}, f={} defining {} field with discriminant {}".format(
+            data['N'],data['k'],data['d'],r[2],r[3],disc))
+    for r in S4s:
+        display(r)
     D4s = [r for r in res if 'D4' in r]
     nD4 = len(D4s)
     print("{} forms are irreducible with splitting field D4:".format(nD4))
     for r in D4s:
-        pol = r[3]
-        disc = NumberField(pol,'a').discriminant().factor()
-        print("N={}, k={}, polynomial={} defining field with discriminant {}".format(r[0],r[1],r[3],disc))
+        display(r)
+    C4s = [r for r in res if 'C4' in r]
+    nC4 = len(C4s)
+    print("{} forms are irreducible with splitting field C4:".format(nC4))
+    for r in C4s:
+        display(r)
