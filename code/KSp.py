@@ -352,7 +352,11 @@ def pSelmerGroup(K, S, p, debug=False):
         a1 = prod((alpha**e for alpha,e in zip(alphalist,avec)), K(1))
         a /= a1
         if debug: print("alpha component is {} with coords {}".format(a1,avec))
-        if debug: print("continuing with quotient {} whose ideal should be a {}'th power: {}".format(a,p,K.ideal(a).factor()))
+        if debug:
+            if K==QQ:
+                print("continuing with quotient {} whose ideal should be a {}'th power: {}".format(a,p,a.factor()))
+            else:
+                print("continuing with quotient {} whose ideal should be a {}'th power: {}".format(a,p,K.ideal(a).factor()))
 
         # 2. Now (a) is a p'th power, say (a)=B^p.
         # Find B and the exponents of [B] w.r.t. basis of C[p]:
@@ -360,8 +364,15 @@ def pSelmerGroup(K, S, p, debug=False):
         supp = a.support()
         vals = [a.valuation(P) for P in supp]
         assert all(v%p==0 for v in vals)
-        B = prod((P**(v//p) for P,v in zip(supp,vals)),K.ideal(1))
-        assert B**p == K.ideal(a)
+        if K==QQ:
+            B = prod((P**(v//p) for P,v in zip(supp,vals)),K(1))
+            assert B**p == a.abs()
+        else:
+            B = prod((P**(v//p) for P,v in zip(supp,vals)),K.ideal(1))
+            assert B**p == K.ideal(a)
+        if debug:
+            print("B={}".format(B))
+            print("a={}".format(a))
 
         if hKp:
             bvec = coords_in_C_p(B,C,p)
@@ -381,8 +392,11 @@ def pSelmerGroup(K, S, p, debug=False):
 
         # 3. Now (a) = (c)^p for some c, so a/c^p is a unit
 
-        assert B.is_principal()
-        a3 = IdealGenerator(B)
+        if K!=QQ:
+            assert B.is_principal()
+        if debug: print("B={}".format(B))
+        a3 = B if K==QQ else IdealGenerator(B)
+        if debug: print("a3={}".format(a3))
         a /= a3**p
         if debug: print("dividing by {}th power of {}".format(p,a3))
         if debug: print("continuing with quotient {} which should be a unit".format(a))
@@ -391,7 +405,10 @@ def pSelmerGroup(K, S, p, debug=False):
 
         # NB not a.is_unit which is true for all a in K^*.  One could
         # also test K.ring_of_integers()(a).is_unit().
-        assert K.ideal(a).is_one()
+        if K==QQ:
+            assert a.abs()==1
+        else:
+            assert K.ideal(a).is_one()
 
         if K == QQ:
             if p == 2:

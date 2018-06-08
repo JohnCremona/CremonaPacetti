@@ -45,8 +45,8 @@ def lam(f,p):
 
 # Vector version of lambda over a list of primes
 
-def lamvec(f,plist):
-    return [lam(f,p) for p in plist]
+def lamvec(f,plist, la=lam):
+    return [la(f,p) for p in plist]
 
 # Given a vector (list) vv, return a pair of indices i<j with
 # vv[i]==vv[j], or return 0 if the entries are distinct:
@@ -73,20 +73,24 @@ def primes_iter(K, degree=1):
 # return a prime (of degree 1) not dividing N modulo which f is
 # irreducible, over the field K.  Return 0 if none is found.
 
-def get_p_1(K,f,N):
-    for p in primes_iter(K):
-        if not p.divides(N) and lam(f,p):
-            return p
-    return 0
+def get_p_1(K,f,N,la=lam):
+   discf = f.discriminant()
+   for p in primes_iter(K):
+      if not p.divides(N) and not p.divides(discf) and la(f,p):
+         return p
+   return 0
 
 # return a prime not dividing N modulo which exactly one of f,g is
 # irreducible (or 0 if none found):
 
-def get_p_2(K,f,g,N):
-    for p in primes_iter(K):
-        if not p.divides(N) and lam(f,p)!=lam(g,p):
-            return p
-    return 0
+def get_p_2(K,f,g,N, la=lam):
+   discf = f.discriminant()
+   discg = g.discriminant()
+   bad = N*discf*discg
+   for p in primes_iter(K):
+      if not p.divides(bad) and la(f,p)!=la(g,p):
+         return p
+   return 0
 
 ###########################################
 #                                         #
@@ -145,6 +149,9 @@ def get_T0(K,S, flist=None, verbose=False):
          print("With plist={}, vlist={}, ij={}".format(plist,vlist,ij));
    vlist = vlist[:-1]
 
+   # Sort the primes into order and recompute the vectors:
+   plist.sort()
+   vlist = [lamvec(f,plist) for f in flist]
    return flist, plist, vlist
 
 #################################################
@@ -230,7 +237,16 @@ def get_T1(K, S, unit_first=True, verbose=False):
          if verbose:
             print("new A={} with {} rows and {} cols".format(A,A.nrows(),A.ncols()))
             print("T1 increases to {}".format(T1))
-   return T1, A
+
+   # the last thing returned is a "decoder" which returns the
+   # discriminant Delta given the splitting beavious at the primes in
+   # T1:
+   B = A.inverse()
+   def decoder(alphalist):
+      e = list(B*vector(alphalist))
+      return prod([D**ZZ(ei) for D,ei in zip(Sx,e)], 1)
+
+   return T1, A, decoder
 
 ######################################################
 #                                                    #
@@ -497,7 +513,7 @@ def algo64(K, S, BB, T2=None, unit_first = True, verbose=False):
    if verbose:
       print("Basis for K(S,2): {}".format(Sx))
 
-   BBdict = dict((k,BB(T2[k])) for k in T2)
+   #BBdict = dict((k,BB(T2[k])) for k in T2)
    ap = BB_trace(BB)
    apdict = dict((k,ap(T2[k])) for k in T2)
    t4 = BB_t4(BB)
