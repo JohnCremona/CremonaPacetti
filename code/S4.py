@@ -25,8 +25,12 @@ def V4_extensions_with_quadratic(K,S,M, verbose=False):
     from C2C3S3 import C2_extensions
     C2s = C2_extensions(K,S)
     D = M.discriminant().squarefree_part()
-    ds = [f.discriminant().squarefree_part() for f in C2s]
-    dMs = [(d*D).squarefree_part() for d in ds]
+    ds = [f.discriminant() for f in C2s]
+    if K==QQ:
+        ds = [d.squarefree_part() for d in ds]
+    dMs = [d*D for d in ds]
+    if K==QQ:
+        dMs = [d.squarefree_part() for d in dMs]
     indices = [i for i in range(len(ds)) if ds[i]!=D and dMs.index(ds[i])<i]
     ds = [ds[i] for i in indices]
     x = polygen(K)
@@ -38,7 +42,9 @@ def V4_extensions(K,S, verbose=False):
     """
     from C2C3S3 import C2_extensions
     C2s = C2_extensions(K,S)
-    ds = [f.discriminant().squarefree_part() for f in C2s]
+    ds = [f.discriminant() for f in C2s]
+    if K==QQ:
+        ds = [d.squarefree_part() for d in ds]
     #print("ds = {}".format(ds))
     ab_pairs = []
     all_pairs = []
@@ -46,7 +52,9 @@ def V4_extensions(K,S, verbose=False):
         for b in ds[:i]:
             if Set([a,b]) in all_pairs:
                 continue
-            c = (a*b).squarefree_part()
+            c = a*b
+            if K==QQ:
+                c = c.squarefree_part()
             ab_pairs.append([a,b])
             all_pairs.append(Set([a,b]))
             all_pairs.append(Set([a,c]))
