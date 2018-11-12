@@ -36,7 +36,11 @@ def lam3(f,p):
     #print("f={}".format(f))
     if f.degree()<4:
         return 0
-    degs = [g.degree() for g,e in f.change_ring(GF(p)).factor()]
+    try:
+        Fp=GF(p)
+    except TypeError:
+        Fp=p.residue_field()
+    degs = [g.degree() for g,e in f.change_ring(Fp).factor()]
     #print("{} mod {} has factors of degree {}: {}".format(f,p,degs,f.change_ring(GF(p)).factor()))
     l = int( degs in [[1,1,1,1],[1,3],[3,1],[4]] )
     if not l:
