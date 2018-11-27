@@ -81,9 +81,9 @@ def C4_extensions_with_quadratic(K,S,M, verbose=False):
     if is_S_unit(M(2),SM):
         test = lambda a: True
     else:
-        test = lambda a: unramified_outside_S(M.extension(x**2-a,'t2'),SM)
+        test = lambda a: unramified_outside_S(M.extension(x**2-a,'t4'),SM)
     alphas = [a for a in M.selmer_group_iterator(SM,2) if not a.is_square() and (DM*a.relative_norm()).is_square() and test(a)]
-    return [polredabs(x**4-a.trace()*x**2+a.norm(K)) for a in alphas]
+    return [polredabs(x**4-a.trace(K)*x**2+a.norm(K)) for a in alphas]
 
 def C4_extensions(K,S, verbose=False):
     r"""Return all C4 extensions of K unramified outside S.  The
