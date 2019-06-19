@@ -64,9 +64,11 @@ def equal_vecs(vv):
 
 def primes_iter(K, degree=1):
     for p in Primes():
-        if K==QQ:
+       if p==2:
+          continue
+       if K==QQ:
             yield p
-        else:
+       else:
             for P in K.primes_above(p,degree):
                 yield P
 
@@ -84,11 +86,15 @@ def get_p_1(K,f,N,la=lam):
 # irreducible (or 0 if none found):
 
 def get_p_2(K,f,g,N, la=lam):
-   discf = f.discriminant()
-   discg = g.discriminant()
-   bad = N*discf*discg
+   fden = f.denominator()
+   gden = g.denominator()
+   ff = fden*f
+   gg = gden*g
+   discf = ff.discriminant()
+   discg = gg.discriminant()
+   bad = N*discf*discg*fden*gden
    for p in primes_iter(K):
-      if not p.divides(bad) and la(f,p)!=la(g,p):
+      if (not p.divides(bad)) and (la(f,p)!=la(g,p)):
          return p
    return 0
 

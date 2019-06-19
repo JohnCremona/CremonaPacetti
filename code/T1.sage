@@ -17,11 +17,14 @@ def alpha(p,D):
 def alphalist(p, Dlist):
     return [alpha(p,D) for D in Dlist]
 
-def primes_iter(K, degree=1):
+def primes_iter(K, degree=1, N=1):
     for p in Primes():
+        if N%p==0:
+            continue # skip to next p
         if K==QQ:
             yield p
         else:
+            print("testing p={}".format(p))
             for P in K.primes_above(p,degree):
                 yield P
 
@@ -35,7 +38,7 @@ def get_T1(K, S, unit_first=True, verbose=False):
     N = prod(S,1)
     M = Matrix(GF(2),0,len(Sx))
     T1 = []
-    primes = primes_iter(K,1)
+    primes = primes_iter(K,None, N.norm()*K.defining_polynomial().discriminant().norm())
     p = primes.next()
     while M.rank() < r:
         p = primes.next()

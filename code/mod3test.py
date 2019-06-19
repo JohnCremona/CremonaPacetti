@@ -99,7 +99,7 @@ def check1form(data, verbose=False):
 def run():
     alldata = read_data()
     print("finished reading data")
-    res = [check1form(data, verbose=False) for data in alldata]
+    res = [check1form(data, verbose=True) for data in alldata]
     print("finished checking")
     reds = [r for r in res if 'reducible' in r]
     nreds = len(reds)

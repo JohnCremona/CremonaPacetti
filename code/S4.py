@@ -24,7 +24,13 @@ def V4_extensions_with_quadratic(K,S,M, verbose=False):
     """
     from C2C3S3 import C2_extensions
     C2s = C2_extensions(K,S)
-    D = M.discriminant().squarefree_part()
+    if M.is_relative():
+        D = M.relative_discriminant()
+    else:
+        D = M.discriminant()
+
+    if K==QQ:
+        D=D.squarefree_part()
     ds = [f.discriminant() for f in C2s]
     if K==QQ:
         ds = [d.squarefree_part() for d in ds]
