@@ -28,7 +28,7 @@
 #
 
 from sage.all import GF, prod, polygen
-from T0T1T2 import equal_vecs, lamvec, get_p_1, get_p_2, alpha, alphalist
+from T0T1T2 import equal_vecs, lamvec, get_p_1, get_p_2
 
 # The function lamda(f,p) for quartics
 

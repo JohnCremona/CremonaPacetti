@@ -170,6 +170,24 @@ def A4_extensions_with_resolvent(K,S,M, verbose=False):
     #print("alphas = {}".format(alphas))
     #print("norms  = {}".format([alpha.norm() for alpha in alphas]))
 
+    # In case M/K is Galois (i.e. a cyclic cubic) then the Galois
+    # group acts on the alphas with no fixed points, and we only want
+    # one per orbit, as otherwise we will construct the same quartic 3
+    # times.  We test for this here -- despite the function's name we
+    # also use this to construct S4 extensions with given cubic
+    # resovent in which case M/K is not Galois and there is no
+    # repetition.
+
+    autos = M.automorphisms()
+    if len(autos)==3:        # remove conjugates (mod squares):
+        sigma = autos[1]
+        def first_conjugate_index(a):
+            sa = sigma(a)
+            i = alphas.index(from_MS2(to_MS2(sa)))
+            j = alphas.index(from_MS2(to_MS2(sigma(sa))))
+            return min(i,j)
+        alphas = [a for i,a in enumerate(alphas) if not first_conjugate_index(a)<i]
+
     def make_quartic(a):
         # a is in the cubic extension M/K and has square norm, so has
         # char poly of the form x^3-p*x^2+q*x-r^2.
@@ -180,7 +198,21 @@ def A4_extensions_with_resolvent(K,S,M, verbose=False):
         x = polygen(K)
         return polredabs((x**2-p)**2-8*r*x-4*q)
 
-    return [make_quartic(a) for a in alphas]
+    quartics = [make_quartic(a) for a in alphas]
+    nq1 = len(quartics)
+    #print("before testing for repeats we have {} quartics".format(nq1))
+    quartics = [q for i,q in enumerate(quartics)
+                if not any(K.extension(q,'t').is_isomorphic_relative(K.extension(q2,'t2'))
+                           for q2 in quartics[:i])]
+    nq2 = len(quartics)
+    #print("after  testing for repeats we have {} quartics".format(nq2))
+    if nq1!=nq2:
+        print("repeats detected in A4_extensions_with_resolvent(): {} reduced to {}".format(nq1,nq2))
+        print("K = {}".format(K))
+        print("S = {}".format(S))
+        print("M = {}".format(M))
+        print("#autos = {}".format(len(autos)))
+    return quartics
 
 def A4_extensions(K,S, verbose=False):
     r"""Return all A4 extensions of K unramified outside S.

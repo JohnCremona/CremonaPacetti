@@ -1,4 +1,4 @@
-from sage.all import polygen, ZZ, QQ, GF, binomial, Matrix, prod, vector
+from sage.all import polygen, ZZ, QQ, GF, binomial, Matrix, prod, vector, Set
 from KSp import pSelmerGroup
 from S4 import A4_extensions_with_resolvent
 from T0T1T2 import lam, primes_iter, residue_field
