@@ -87,7 +87,7 @@ def get_T0_mod3(K,S, flist=None, verbose=False):
    ij = equal_vecs(vlist)
    if verbose:
       print("With plist={}, vlist={}, ij={}".format(plist,vlist,ij));
-   N = prod(S,1) * prod([f.discriminant() for f in flist])
+   N = prod(S,6) * prod([f.discriminant() for f in flist])
 # As long as the vectors in vlist are not all distinct, find two
 # indices i,j for which they are the same and find a new prime which
 # distinguishes these two, add it to the list and update.  The primes
