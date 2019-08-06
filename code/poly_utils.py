@@ -28,12 +28,12 @@ def rescale(f):
 ### Return a simpler polynomial defining the same field ###
 
 def pol_simplify(f):
-    K = f.base_field()
+    K = f.base_ring()
     g = rescale(f)
     if K==QQ:
         return polredabs(g)
-    L = K.extension(g)
+    L = K.extension(g,'a_')
     h = pol_simplify(L.absolute_polynomial())
     # one factor of h over K will define the same relative extension
     # of K as the original.  We return the first such:
-    return (p for p,e in h.change_ring(K).factor() if K.extension(p).is_isomorphic_relative(L)).next()
+    return (p for p,e in h.change_ring(K).factor() if K.extension(p,'b_').is_isomorphic_relative(L)).next()

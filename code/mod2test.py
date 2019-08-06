@@ -58,21 +58,30 @@ def check1form(data, verbose=False):
     return data,'reducible'
 
 
-def run():
+def run(verbose=False):
     alldata = read_data('mod-2-reps.txt')
-    print("finished reading data")
-    res = [check1form(data, verbose=False) for data in alldata]
+    print("finished reading data: {} newforms".format(len(alldata)))
+    res = [check1form(data, verbose=verbose) for data in alldata]
     print("finished checking")
+    #print(res)
     reds = [r for r in res if 'reducible' in r]
     nreds = len(reds)
     irreds = [r for r in res if 'irreducible' in r]
     nirreds = len(irreds)
-    print("{} forms are irreducible and {} are reducible".format(nreds,nirreds))
+    print("{} forms are reducible and {} are irreducible".format(nreds,nirreds))
     def display(r):
         pol = r[2]
         disc = NumberField(pol,'a').discriminant().factor()
         data = r[0]
         print("N={}, k={}, d={}, f={} defining {} field with discriminant {}".format(
             data['N'],data['k'],data['d'],r[2],r[3],disc))
-    for r in irreds:
-        display(r)
+    C3s = [r for r in res if 'C3' in r]
+    S3s = [r for r in res if 'S3' in r]
+    if C3s:
+        print("{} forms are irreducible with splitting field C3:".format(len(C3s)))
+        for r in C3s:
+            display(r)
+    if S3s:
+        print("{} forms are irreducible with splitting field S3:".format(len(S3s)))
+        for r in S3s:
+            display(r)

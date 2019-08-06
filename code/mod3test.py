@@ -98,16 +98,16 @@ def check1form(data, verbose=False):
 # 13 irreducible, all S4
 # 17 reducible
 
-def run():
+def run(verbose=False):
     alldata = read_data()
     print("finished reading data")
-    res = [check1form(data, verbose=True) for data in alldata]
+    res = [check1form(data, verbose=verbose) for data in alldata]
     print("finished checking")
     reds = [r for r in res if 'reducible' in r]
     nreds = len(reds)
     irreds = [r for r in res if 'irreducible' in r]
     nirreds = len(irreds)
-    print("{} forms are irreducible and {} are reducible".format(nreds,nirreds))
+    print("{} forms are reducible and {} are irreducible".format(nreds,nirreds))
     S4s = [r for r in res if 'S4' in r]
     nS4 = len(S4s)
     print("{} forms are irreducible with splitting field S4:".format(nS4))

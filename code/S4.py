@@ -211,9 +211,14 @@ def A4_extensions_with_resolvent(K,S,M, verbose=False):
     quartics = [make_quartic(a) for a in alphas]
     nq1 = len(quartics)
     #print("before testing for repeats we have {} quartics".format(nq1))
-    quartics = [q for i,q in enumerate(quartics)
-                if not any(K.extension(q,'t').is_isomorphic_relative(K.extension(q2,'t2'))
-                           for q2 in quartics[:i])]
+    if K==QQ:
+        quartics = [q for i,q in enumerate(quartics)
+                    if not any(K.extension(q,'t').is_isomorphic(K.extension(q2,'t2'))
+                               for q2 in quartics[:i])]
+    else:
+        quartics = [q for i,q in enumerate(quartics)
+                    if not any(K.extension(q,'t').is_isomorphic_relative(K.extension(q2,'t2'))
+                               for q2 in quartics[:i])]
     nq2 = len(quartics)
     #print("after  testing for repeats we have {} quartics".format(nq2))
     if nq1!=nq2:
