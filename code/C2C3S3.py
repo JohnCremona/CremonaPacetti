@@ -33,122 +33,21 @@
 # when S does not contain all primes above 3.
 #
 # For the cubics we use Kummer theory, following Cohen's book and
-# Angelos Koutsiasnas's thesis for some details.  Where we use Kummer
+# Angelos Koutsianas's thesis for some details.  Where we use Kummer
 # theory to construct cyclic extensions we could alternatively use
 # Class Field Theory, and we expect to write code for that once
 # https://trac.sagemath.org/ticket/15829 is finished.
 #
 #
 
-from sage.all import ProjectiveSpace, polygen, proof, ZZ, QQ, PolynomialRing, NumberField
+from sage.all import ProjectiveSpace, polygen, proof, ZZ, PolynomialRing, QQ, NumberField
+from poly_utils import pol_simplify
+from KSp import pSelmerGroup, is_S_unit, unramified_outside_S
 
 # The following line means that class groups, etc, are computed
 # non-rigorously (assuming GRH) which makes everything run faster.
 
 proof.number_field(False)
-
-# Over QQ we can do x.is_S_unit(S) when x is an element but not an
-# ideal; over other number fields only ideals have the method, not
-# elements!
-
-def is_S_unit(a, S):
-    r"""Returns True iff a is an S-unit where a is in Q or in a number
-    field K and S is a list of primes of K.
-
-    INPUT:
-
-    - ``a`` (integer, rational or number field element or ideal) --
-    any integer or rational number, or number field element, or
-    fractional ideal.
-
-    - ``S`` (list) -- list of prime numbers or prime ideals
-
-    OUTPUT:
-
-    (boolean) ``True`` if and only if ``a`` is an ``S``-unit.
-  """
-    K = a.parent()
-    # rationals have an is_S_unit method:
-    if K in [ZZ,QQ]:
-        return QQ(a).is_S_unit(S)
-    # fractional ideals also have such a method:
-    try:
-        return a.is_S_unit(S)
-    except AttributeError:
-        return K.ideal(a).is_S_unit(S)
-
-def unramified_outside_S(L,S, p=None, debug=False):
-    r"""Test whether ``L`` is unramified over its base outside ``S``.
-
-    INPUT:
-
-    - ``L`` (relative number field) -- a relative number field with base field `K`.
-
-    - ``S`` (list) -- a list pf primes of `K`.
-
-    - ``p`` (prime or ``None`` (default)) -- if not ``None``, a prime number.
-
-    - ``debug`` (boolean (default ``False``)) -- debugging flag.
-
-    OUTPUT:
-
-    (boolean) ``True`` if and only if 'L/K' is unramified outside `S`.
-    If `p` is not ``None`` only test primes dividing `p`.
-    """
-    # This one-liner works but is slow
-    # return is_S_unit(L.relative_discriminant(),S)
-    if debug:
-        print("testing ramification of {}".format(L))
-    f = L.defining_polynomial()
-    d = f.discriminant()
-    K = f.base_ring()
-
-    if K==QQ:
-        D = d
-    else:
-        D = K.ideal(d)
-    for P in S:
-        for _ in range(D.valuation(P)):
-            D /= P
-    # now D is the prime-to-S part of disc(f)
-    if debug:
-        print("Prime-to-S part of disc = {} with norm {}".format(D,D.absolute_norm()))
-
-    try:
-        bads = D.prime_factors()
-    except AttributeError:
-        bads = D.support()
-
-    if p is not None:
-        p = K(p)
-        bads = [P for P in bads if p.valuation(P)>0]
-    if debug:
-        print("bads = {}".format(bads))
-    if not bads:
-        if debug:
-            print("OK: no bad primes in disc")
-        return True
-    if any(d.valuation(P)%2==1 for P in bads):
-        if debug:
-            print("NO: disc has odd valn at some bad primes in disc")
-        return False
-    # Now d is divisible by one or more primes not in S, to even
-    # powers, and we must work harder to see if L is ramified at these
-    # primes.
-    if debug:
-        print("final check of {} bad primes in disc: {}".format(len(bads), bads))
-    for P in bads:
-        if debug:
-            print("Testing whether {} is ramified in L".format(P))
-        for Q in L.primes_above(P):
-            e = Q.relative_ramification_index()
-            if e>1:
-                if debug:
-                    print("NO")
-                return False
-    if debug:
-        print("OK")
-    return True
 
 ############## C2 (quadratic extensions) ###############################
 
@@ -180,7 +79,7 @@ def C2_extensions(K,S):
         test = lambda a: True
     else:
         test = lambda a: unramified_outside_S(K.extension(x**2-a,'t2'), S, 2)
-    return [x**2-a for a in K.selmer_group_iterator(S,2) if not a.is_square() and test(a)]
+    return [pol_simplify(x**2-a) for a in K.selmer_group_iterator(S,2) if not a.is_square() and test(a)]
 
 ############## C3 (cyclic cubic extensions) ###############################
 
@@ -211,7 +110,6 @@ def C3_extensions(K,S, verbose=False, debug=False):
        check. In the general case we need to work harder: we work over
        `K(\zeta_3)` and then descend.
     """
-    from KSp import pSelmerGroup
     x = polygen(K)
     if verbose:
         print("finding C3 extensions over {} unramified outside {}".format(K,S))
@@ -223,7 +121,7 @@ def C3_extensions(K,S, verbose=False, debug=False):
             test = lambda a: unramified_outside_S(K.extension(x**3-a,'t3'), S, 3)
         # use K(S,3), omitting trivial element and only including one of a, a^-1:
         from KSp import selmer_group_projective
-        return [x**3-a for a in selmer_group_projective(K,S,3) if test(a)]
+        return [pol_simplify(x**3-a) for a in selmer_group_projective(K,S,3) if test(a)]
 
     # now K does not contain the cube roots of unity.  We adjoin them.
     # See Angelos Koutsianas's thesis Algorithm 3 (page 45)
@@ -312,7 +210,7 @@ def C3_extensions(K,S, verbose=False, debug=False):
             print("Problem: relative discriminants are {}".format([L.relative_discriminant().factor() for L in fields]))
         else:
             if verbose: print("computed unramified polys OK")
-    return polys
+    return [pol_simplify(f) for f in polys]
 
 ############## S3 (non-cyclic cubic extensions) ###############################
 
@@ -442,7 +340,7 @@ def S3_extensions_with_resolvent(K,S,M, verbose=False):
 
     if verbose:
         print("polys  (after final test): {}".format(polys))
-    return polys
+    return [pol_simplify(f) for f in polys]
 
 def S3_extensions(K,S, verbose=False):
     r"""Return all S3 extensions of K unramified outside S.

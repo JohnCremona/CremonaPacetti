@@ -45,7 +45,7 @@
 # are subsidiary utilities.  Some of these are only to allow the same
 # code to work over QQ as over any number field.
 
-from sage.all import Matrix, GF, prod, VectorSpace, ProjectiveSpace, QQ
+from sage.all import Matrix, GF, prod, VectorSpace, ProjectiveSpace, QQ, ZZ
 
 def IdealGenerator(I):
     r"""Return the generator of a principal ideal.
@@ -450,4 +450,107 @@ Now a can be expressed in terms of the unit generators (fundamental
 units and, if necessary, a root of unity.
 
 """
+
+# Over QQ we can do x.is_S_unit(S) when x is an element but not an
+# ideal; over other number fields only ideals have the method, not
+# elements!
+
+def is_S_unit(a, S):
+    r"""Returns True iff a is an S-unit where a is in Q or in a number
+    field K and S is a list of primes of K.
+
+    INPUT:
+
+    - ``a`` (integer, rational or number field element or ideal) --
+    any integer or rational number, or number field element, or
+    fractional ideal.
+
+    - ``S`` (list) -- list of prime numbers or prime ideals
+
+    OUTPUT:
+
+    (boolean) ``True`` if and only if ``a`` is an ``S``-unit.
+  """
+    K = a.parent()
+    # rationals have an is_S_unit method:
+    if K in [ZZ,QQ]:
+        return QQ(a).is_S_unit(S)
+    # fractional ideals also have such a method:
+    try:
+        return a.is_S_unit(S)
+    except AttributeError:
+        return K.ideal(a).is_S_unit(S)
+
+def unramified_outside_S(L,S, p=None, debug=False):
+    r"""Test whether ``L`` is unramified over its base outside ``S``.
+
+    INPUT:
+
+    - ``L`` (relative number field) -- a relative number field with base field `K`.
+
+    - ``S`` (list) -- a list pf primes of `K`.
+
+    - ``p`` (prime or ``None`` (default)) -- if not ``None``, a prime number.
+
+    - ``debug`` (boolean (default ``False``)) -- debugging flag.
+
+    OUTPUT:
+
+    (boolean) ``True`` if and only if 'L/K' is unramified outside `S`.
+    If `p` is not ``None`` only test primes dividing `p`.
+    """
+    # This one-liner works but is slow
+    # return is_S_unit(L.relative_discriminant(),S)
+    if debug:
+        print("testing ramification of {}".format(L))
+    f = L.defining_polynomial()
+    d = f.discriminant()
+    K = f.base_ring()
+
+    if K==QQ:
+        D = d
+    else:
+        D = K.ideal(d)
+    for P in S:
+        for _ in range(D.valuation(P)):
+            D /= P
+    # now D is the prime-to-S part of disc(f)
+    if debug:
+        print("Prime-to-S part of disc = {} with norm {}".format(D,D.absolute_norm()))
+
+    try:
+        bads = D.prime_factors()
+    except AttributeError:
+        bads = D.support()
+
+    if p is not None:
+        p = K(p)
+        bads = [P for P in bads if p.valuation(P)>0]
+    if debug:
+        print("bads = {}".format(bads))
+    if not bads:
+        if debug:
+            print("OK: no bad primes in disc")
+        return True
+    if any(d.valuation(P)%2==1 for P in bads):
+        if debug:
+            print("NO: disc has odd valn at some bad primes in disc")
+        return False
+    # Now d is divisible by one or more primes not in S, to even
+    # powers, and we must work harder to see if L is ramified at these
+    # primes.
+    if debug:
+        print("final check of {} bad primes in disc: {}".format(len(bads), bads))
+    for P in bads:
+        if debug:
+            print("Testing whether {} is ramified in L".format(P))
+        for Q in L.primes_above(P):
+            e = Q.relative_ramification_index()
+            if e>1:
+                if debug:
+                    print("NO")
+                return False
+    if debug:
+        print("OK")
+    return True
 

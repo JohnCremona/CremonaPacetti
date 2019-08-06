@@ -1,3 +1,5 @@
+from sage.all import QQ, ZZ, QuadraticField, GF, NumberField, DirichletGroup
+
 # Function to read one line of Drew's output
 
 def read1line(L):
@@ -13,7 +15,6 @@ def read1line(L):
     data['k'] = L[1] # weight
     data['i'] = L[2] # index of character
     data['d'] = L[3] # degree of coefficient field (=1)
-    chilist = L[5]
     data['ap'] = dict(L[4])
     data['chilist'] = L[5]
     return data
@@ -29,6 +30,7 @@ def read_data(filename='mod-3-reps.txt'):
 from T0T1T2 import get_T1
 from T0mod3 import get_T0_mod3
 from S4 import abs_irred_extensions_with_quadratic, irred_extensions_with_quadratic
+assert abs_irred_extensions_with_quadratic
 
 # Process a single form data packet:
 
@@ -96,16 +98,16 @@ def check1form(data, verbose=False):
 # 13 irreducible, all S4
 # 17 reducible
 
-def run():
+def run(verbose=False):
     alldata = read_data()
     print("finished reading data")
-    res = [check1form(data, verbose=True) for data in alldata]
+    res = [check1form(data, verbose=verbose) for data in alldata]
     print("finished checking")
     reds = [r for r in res if 'reducible' in r]
     nreds = len(reds)
     irreds = [r for r in res if 'irreducible' in r]
     nirreds = len(irreds)
-    print("{} forms are irreducible and {} are reducible".format(nreds,nirreds))
+    print("{} forms are reducible and {} are irreducible".format(nreds,nirreds))
     S4s = [r for r in res if 'S4' in r]
     nS4 = len(S4s)
     print("{} forms are irreducible with splitting field S4:".format(nS4))
