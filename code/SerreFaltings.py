@@ -19,9 +19,7 @@ def vec123(K,basis):
     return vecP
 
 def NonCubicSet(K,S, verbose=False):
-    u = -1 if K==QQ else  K(K.unit_group().torsion_generator())
-    from KSp import IdealGenerator
-    Sx = [u] + [IdealGenerator(P) for P in S]
+    Sx = K.selmer_group(SL,2) # list of generators of K(S,2)
     r = len(Sx)
     d123 = r + binomial(r,2) + binomial(r,3)
     vecP = vec123(K,Sx)
