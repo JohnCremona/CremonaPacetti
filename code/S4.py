@@ -103,7 +103,10 @@ def C4_extensions_with_quadratic(K,S,M, verbose=False):
     else:
         test = lambda a: unramified_outside_S(M.extension(polygen(M)**2-a,'t4'),SM)
     alphas = [a for a in M.selmer_group_iterator(SM,2) if not a.is_square() and (DM*a.relative_norm()).is_square() and test(a)]
-    return [pol_simplify(x**4-a.trace(K)*x**2+a.norm(K)) for a in alphas]
+    if K==QQ:
+        return [pol_simplify(x**4-a.trace()*x**2+a.norm()) for a in alphas]
+    else:
+        return [pol_simplify(x**4-a.trace(K)*x**2+a.norm(K)) for a in alphas]
 
 def C4_extensions(K,S, verbose=False):
     r"""Return all C4 extensions of K unramified outside S.  The
@@ -133,12 +136,47 @@ def D4_extensions_with_quadratic(K,S,M, verbose=False):
     conj_ind = lambda b: betas2.index(from_MS2(to_MS2(sigma(b))))
     betas = [b for i,b in enumerate(betas2) if not conj_ind(b)<i]
     # remove those whose norm is a square in M:
-    norms  = [b.norm() for b in betas]
-    betas = [b for b,n in zip(betas,norms) if not M(n).is_square()]
-    norms  = [b.norm() for b in betas]
+    d = M.defining_polynomial().discriminant()
+    norms  = [b.relative_norm() for b in betas]
+    betas = [b for b,n in zip(betas,norms) if not (n).is_square()]
+    #print("M = {}".format(M))
+    #print("betas: {}".format(betas))
+    norms  = [b.relative_norm() for b in betas]
     traces = [b.trace() for b in betas]
     x = polygen(K)
-    return [pol_simplify(x**4-t*x**2+n) for t,n in zip(traces,norms)]
+    quartics = [pol_simplify(x**4-t*x**2+n) for t,n in zip(traces,norms)]
+    #quartics = [(x**4-t*x**2+n) for t,n in zip(traces,norms)]
+    #print(quartics)
+    #print([q.factor() for q in quartics])
+    quartics = [q for q in quartics if unramified_outside_S(K.extension(q,'c_'),S,p=2)]
+    return quartics
+
+def D4_extensions_with_quadratic_V4minus(K,S,M, verbose=False):
+    r"""Return all D4 extensions of K unramified outside S which are
+    V4minus extensions of the quadratic field M, where M is also
+    unramified outside S.
+    """
+    if verbose:
+        print("finding D4 (V4-) extensions of {} over {} unramified outside {}".format(K,M,S))
+
+    SM = sum([M.primes_above(P) for P in S],[])
+    sigma = M.automorphisms()[1]
+
+    from KSp import pSelmerGroup
+    MS2, MS2_gens, from_MS2, to_MS2 = pSelmerGroup(M,SM,ZZ(2))
+    betas2 = [from_MS2(v) for v in MS2 if v]
+    # remove conjugates (mod squares):
+    conj_ind = lambda b: betas2.index(from_MS2(to_MS2(sigma(b))))
+    betas = [b for i,b in enumerate(betas2) if not conj_ind(b)<i]
+    # remove those whose norm is a square in M:
+    D = M.defining_polynomial().discriminant()
+    norms  = [b.relative_norm() for b in betas]
+    betas = [b for b,n in zip(betas,norms) if not n.is_square() and not (D*n).is_square()]
+    norms  = [b.relative_norm() for b in betas]
+    traces = [b.trace() for b in betas] #change for K = QQ (maybe)
+    x = polygen(K)
+    #print("Betas={}".format(enumerate(betas)))
+    return [pol_simplify(x**4-t*x**2+n) for t,n in zip(traces,norms)]#, betas
 
 def D4_extensions(K,S, verbose=False):
     r"""Return all D4 extensions of K unramified outside S.
