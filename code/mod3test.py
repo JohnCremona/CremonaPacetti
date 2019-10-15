@@ -29,15 +29,19 @@ def read_data(filename='mod-3-reps.txt'):
 
 from T0T1T2 import get_T1
 from T0mod3 import get_T0_mod3
-from S4 import abs_irred_extensions_with_quadratic, irred_extensions_with_quadratic
+from S4 import abs_irred_extensions_with_quadratic, irred_extensions_with_quadratic, irred_extensions
 assert abs_irred_extensions_with_quadratic
 
 # Process a single form data packet:
 
 quartic_lists = {}
-def get_quartics(S, D):
+def get_quartics(S, D=None):
     global quartic_lists
     SS = tuple(S)
+    if D==None:
+        if not (SS,) in quartic_lists:
+            quartic_lists[(SS,)] = irred_extensions(QQ,S)
+        return quartic_lists[(SS,)]
     if not (SS,D) in quartic_lists:
         quartic_lists[(SS,D)] = irred_extensions_with_quadratic(QQ,S,QuadraticField(D))
     return quartic_lists[(SS,D)]
@@ -69,9 +73,21 @@ def check1form(data, verbose=False):
     # always be negative, and in particular not 1:
     assert D<0
     #quartics = abs_irred_extensions_with_quadratic(QQ,S,QuadraticField(D))
-    quartics = irred_extensions_with_quadratic(QQ,S,QuadraticField(D))
+    #quartics = irred_extensions_with_quadratic(QQ,S,QuadraticField(D))
+    #quartics = irred_extensions(QQ,S)
+    #quartics = [g for g in quartics if NumberField(g,'c_').discriminant().prime_to_m_part(3*N) in [1,-1]]
+    quartics = get_quartics(S)
     if verbose:
         print("candidate irreducible quartics: {}".format(quartics))
+    fields = [NumberField(q,'c_') for q in quartics]
+    print([not any([F1.is_isomorphic(F2) for F2 in fields if F2!=F1]) for F1 in fields])
+    for i,q in enumerate(quartics):
+        F = NumberField(q,'c_')
+        for j,q2 in enumerate(quartics):
+            if j<=i:
+                continue
+            F2= NumberField(q2,'c2_')
+            assert not F.is_isomorphic(F2)
     _, T0, vlist = get_T0_mod3(QQ,S,quartics)
     if verbose:
         print("test prime set T0: {}".format(T0))
@@ -100,7 +116,7 @@ def check1form(data, verbose=False):
 
 def run(verbose=False):
     alldata = read_data()
-    print("finished reading data")
+    print("finished reading data: {} newforms".format(len(alldata)))
     res = [check1form(data, verbose=verbose) for data in alldata]
     print("finished checking")
     reds = [r for r in res if 'reducible' in r]
