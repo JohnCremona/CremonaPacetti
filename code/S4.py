@@ -199,8 +199,11 @@ def A4_extensions_with_resolvent(K,S,M, verbose=False):
     The exact same code gives all S4-extensions whose cubic resolvent
     is the normal closure of M, when M is a non-Galois cubic.
     """
+    autos = M.automorphisms()
+    name = "S4" if len(autos)==1 else "A4"
+
     if verbose:
-        print("finding A4 extensions of {} over {} unramified outside {}".format(K,M,S))
+        print("finding {} extensions of {} over {} unramified outside {}".format(name,K,M,S))
 
     SM = sum([M.primes_above(P) for P in S],[])
 
@@ -226,9 +229,8 @@ def A4_extensions_with_resolvent(K,S,M, verbose=False):
     # resovent in which case M/K is not Galois and there is no
     # repetition.
 
-    autos = M.automorphisms()
-    if len(autos)==3:        # remove conjugates (mod squares):
-        sigma = autos[1]
+    if name=="A4":        # remove conjugates (mod squares):
+        sigma = autos[1]  # since autos[0] is the identity
         def first_conjugate_index(a):
             sa = sigma(a)
             i = alphas.index(from_MS2(to_MS2(sa)))
@@ -248,7 +250,8 @@ def A4_extensions_with_resolvent(K,S,M, verbose=False):
 
     quartics = [make_quartic(a) for a in alphas]
     nq1 = len(quartics)
-    #print("before testing for repeats we have {} quartics".format(nq1))
+    if verbose:
+        print("before testing for repeats we have {} {} quartics".format(nq1, name))
     if K==QQ:
         quartics = [q for i,q in enumerate(quartics)
                     if not any(K.extension(q,'t').is_isomorphic(K.extension(q2,'t2'))
@@ -258,13 +261,23 @@ def A4_extensions_with_resolvent(K,S,M, verbose=False):
                     if not any(K.extension(q,'t').is_isomorphic_relative(K.extension(q2,'t2'))
                                for q2 in quartics[:i])]
     nq2 = len(quartics)
-    #print("after  testing for repeats we have {} quartics".format(nq2))
+    if verbose:
+        print("after  testing for repeats we have {} {} quartics".format(nq2, name))
     if nq1!=nq2:
-        print("repeats detected in A4_extensions_with_resolvent(): {} reduced to {}".format(nq1,nq2))
+        print("repeats detected in {}_extensions_with_resolvent(): {} reduced to {}".format(name, nq1,nq2))
         print("K = {}".format(K))
         print("S = {}".format(S))
         print("M = {}".format(M))
         print("#autos = {}".format(len(autos)))
+
+    # The second V4 layer may be ramified at primes above 2 not in S.
+    # So we do a final check (unless S contains all P|2):
+
+    test_needed = not is_S_unit(K(2),S)
+    if test_needed:
+        quartics = [q for q in quartics if unramified_outside_S(K.extension(q,'t4'),S)]
+        if verbose:
+            print("After final test at 2 we have {} {} quartics".format(len(quartics), name))
     return quartics
 
 def A4_extensions(K,S, verbose=False):

@@ -27,7 +27,7 @@ def rescale(f):
 
 ### Return a simpler polynomial defining the same field ###
 
-def pol_simplify(f):
+def pol_simplify(f, debug=False):
     K = f.base_ring()
     g = rescale(f)
     if K==QQ:
@@ -36,4 +36,8 @@ def pol_simplify(f):
     h = pol_simplify(L.absolute_polynomial())
     # one factor of h over K will define the same relative extension
     # of K as the original.  We return the first such:
-    return (p for p,e in h.change_ring(K).factor() if K.extension(p,'b_').is_isomorphic_relative(L)).next()
+    new_f = (p for p,e in h.change_ring(K).factor() if K.extension(p,'b_').is_isomorphic_relative(L)).next()
+    if debug:
+        print("{} ---> {}".format(f,new_f))
+        assert K.extension(new_f,'b').is_isomorphic_relative(L)
+    return new_f

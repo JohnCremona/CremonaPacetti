@@ -122,6 +122,7 @@ def C3_extensions(K,S, verbose=False, debug=False):
         # use K(S,3), omitting trivial element and only including one of a, a^-1:
         from KSp import selmer_group_projective
         return [pol_simplify(x**3-a) for a in selmer_group_projective(K,S,3) if test(a)]
+        #return [x**3-a for a in selmer_group_projective(K,S,3) if test(a)]
 
     # now K does not contain the cube roots of unity.  We adjoin them.
     # See Angelos Koutsianas's thesis Algorithm 3 (page 45)
@@ -260,10 +261,13 @@ def S3_extensions_with_resolvent(K,S,M, verbose=False):
     if verbose:
         print("{} cubics found".format(len(cubics)))
 
+    if len(cubics)==0:
+        return []
+
     # Now from these cubics L/M/K we must pick out those which are
     # Galois and have group S3 (not C6):
-    Mx = PolynomialRing(M,'xM')
-    Kx = PolynomialRing(K,'x')
+    Mx = cubics[0].parent()
+    Kx = M.defining_polynomial().parent()
 
     # test function for cubics in M[x].  If they define S3 Galois
     # extensions of K then we return a cubic over K with the same
@@ -273,12 +277,16 @@ def S3_extensions_with_resolvent(K,S,M, verbose=False):
         if verbose:
             print("testing {}".format(f))
         fbar = Mx([g(c) for c in f.coefficients(sparse=False)])
+        if verbose:
+            print("f = {}, fbar = {}".format(f,fbar))
         if f==fbar:
             if verbose:
                 print("easy case as this f is in K[x]")
             h = Kx([c[0] for c in f.coefficients(sparse=False)])
             if h.discriminant().is_square():
                 return False
+            if verbose:
+                print("*** returning {} as valid".format(h))
             return h
         # both f splits over L since L/K is C3
         # if fbar does not split over L then L/K is not Galois:
@@ -288,8 +296,12 @@ def S3_extensions_with_resolvent(K,S,M, verbose=False):
             return False
         # now L/K is Galois.
         f_roots = f.roots(L, multiplicities=False)
+        if verbose:
+            print("roots of f:    {}".format(f_roots))
+            print("roots of fbar: {}".format(fbar_roots))
+            print("sums:          {}".format([[a+b for b in fbar_roots] for a in f_roots]))
         y = f_roots[0]+fbar_roots[0]
-        if y==0:
+        if y in K:
             y = f_roots[0]+fbar_roots[1]
         if verbose:
             print("f, fbar distinct.  Using y={} with minpoly {}".format(y,y.minpoly()))
@@ -311,7 +323,7 @@ def S3_extensions_with_resolvent(K,S,M, verbose=False):
                 print("...!!!!!!!!!!!!!!!discarding as reducible")
             return False
         if verbose:
-            print("...returning as valid")
+            print("*** returning {} as valid".format(h))
         return h
 
     # Using the test function we select those cubics which define S3 extensions over K
@@ -335,12 +347,13 @@ def S3_extensions_with_resolvent(K,S,M, verbose=False):
     if check_3:
         polys = [h for h in polys if unramified_outside_S(K.extension(h,'t2'),S,3)]
 
-    if K == QQ:
-        polys = [NumberField(h,'a').optimized_representation()[0].defining_polynomial() for h in polys]
-
     if verbose:
-        print("polys  (after final test): {}".format(polys))
-    return [pol_simplify(f) for f in polys]
+        print("polys  (after final test, before simplification): {}".format(polys))
+
+    polys = [pol_simplify(f) for f in polys]
+    if verbose:
+        print("polys  (after final test, after simplification): {}".format(polys))
+    return polys
 
 def S3_extensions(K,S, verbose=False):
     r"""Return all S3 extensions of K unramified outside S.

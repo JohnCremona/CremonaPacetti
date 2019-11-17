@@ -87,7 +87,8 @@ def check1form(data, verbose=False):
             if j<=i:
                 continue
             F2= NumberField(q2,'c2_')
-            assert not F.is_isomorphic(F2)
+            if F.is_isomorphic(F2):
+                print("isomorphic fields with quartics {} and {}".format(q,q2))
     _, T0, vlist = get_T0_mod3(QQ,S,quartics)
     if verbose:
         print("test prime set T0: {}".format(T0))
