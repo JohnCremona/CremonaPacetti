@@ -1,4 +1,4 @@
-from sage.all import polygen, ZZ, QQ, GF, binomial, Matrix, prod, vector, Set
+from sage.all import polygen, ZZ, GF, binomial, Matrix, prod, vector, Set
 from KSp import pSelmerGroup
 from S4 import A4_extensions_with_resolvent
 from T0T1T2 import lam, primes_iter, residue_field
@@ -19,7 +19,7 @@ def vec123(K,basis):
     return vecP
 
 def NonCubicSet(K,S, verbose=False):
-    Sx = K.selmer_group(SL,2) # list of generators of K(S,2)
+    Sx = K.selmer_group(S,2) # list of generators of K(S,2)
     r = len(Sx)
     d123 = r + binomial(r,2) + binomial(r,3)
     vecP = vec123(K,Sx)

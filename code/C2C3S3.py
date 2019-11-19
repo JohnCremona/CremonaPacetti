@@ -40,7 +40,7 @@
 #
 #
 
-from sage.all import ProjectiveSpace, polygen, proof, ZZ, PolynomialRing, QQ, NumberField
+from sage.all import ProjectiveSpace, polygen, proof, ZZ, QQ
 from poly_utils import pol_simplify
 from KSp import pSelmerGroup, is_S_unit, unramified_outside_S
 
@@ -122,7 +122,6 @@ def C3_extensions(K,S, verbose=False, debug=False):
         # use K(S,3), omitting trivial element and only including one of a, a^-1:
         from KSp import selmer_group_projective
         return [pol_simplify(x**3-a) for a in selmer_group_projective(K,S,3) if test(a)]
-        #return [x**3-a for a in selmer_group_projective(K,S,3) if test(a)]
 
     # now K does not contain the cube roots of unity.  We adjoin them.
     # See Angelos Koutsianas's thesis Algorithm 3 (page 45)
@@ -266,12 +265,24 @@ def S3_extensions_with_resolvent(K,S,M, verbose=False):
 
     # Now from these cubics L/M/K we must pick out those which are
     # Galois and have group S3 (not C6):
+
     Mx = cubics[0].parent()
     Kx = M.defining_polynomial().parent()
 
     # test function for cubics in M[x].  If they define S3 Galois
     # extensions of K then we return a cubic over K with the same
     # splitting field, otherwise we return False.
+
+    # The following function is base on Section 4.3 of AK's thesis.
+    # There it was assumed that the next-to-leading coefficient of f
+    # is 0, which would be the case if f had the form x^3-c, but since
+    # the cubics returned by C3_extensions have been simplified, we
+    # cannot assume this.  Instead, we can ensure that the polynomial
+    # h constructed is irreducible simply by testing that y=a1+b1 is
+    # not in K (instead of testing that it is not 0 as in AK), and it
+    # cannot be that both a1+b1 and a1+b2 are in K (if so then d=b2-b1
+    # is in K but the automorphism sigma takes b1 to b2 co cannot then
+    # have order p, following AK's notation).
 
     def test(f):
         if verbose:
@@ -288,40 +299,51 @@ def S3_extensions_with_resolvent(K,S,M, verbose=False):
             if verbose:
                 print("*** returning {} as valid".format(h))
             return h
-        # both f splits over L since L/K is C3
-        # if fbar does not split over L then L/K is not Galois:
+
+        # f splits over L, since L/M is C3.  Test if fbar also splits
+        # over L, as otherwise L/K is not Galois:
         L = f.base_ring().extension(f,'c')
         fbar_roots = fbar.roots(L, multiplicities=False)
         if len(fbar_roots)==0:
+            if verbose:
+                print("*** not Galois over K")
             return False
-        # now L/K is Galois.
+
+        # now L/K is Galois.  We test that it is S3 not C6, and find a
+        # cubic over K with splitting field L/K:
         f_roots = f.roots(L, multiplicities=False)
         if verbose:
             print("roots of f:    {}".format(f_roots))
             print("roots of fbar: {}".format(fbar_roots))
-            print("sums:          {}".format([[a+b for b in fbar_roots] for a in f_roots]))
+
         y = f_roots[0]+fbar_roots[0]
         if y in K:
             y = f_roots[0]+fbar_roots[1]
+        # these two cannot both be in K (see comment above), and when
+        # not in K it has degree 3 over K so its min poly is the cubic
+        # we seek.
+        h = y.minpoly()
         if verbose:
-            print("f, fbar distinct.  Using y={} with minpoly {}".format(y,y.minpoly()))
-        # h is the min poly of y, which is in K[x] when S3 NB if h is
-        # not in K[x] then certainly C6; if h is in K[x] it may be C6
-        # and we have to check the discriminant later.
-        coeffs = y.minpoly().coefficients(sparse=False)
+            print("f, fbar distinct.  Using y={} with minpoly {}".format(y,h))
+        # h is in K[x] when S3. If h is not in K[x] then certainly C6;
+        # if h is in K[x] it may be C6 and we have to check the
+        # discriminant later.  So far h is in M[x] since y is in L and
+        # L is a relative extension of M.  We test that all the coeffs
+        # of h are in fact in K, and if so convert h to a polynomial
+        # in K[x]:
+        coeffs = h.coefficients(sparse=False)
         if any(c[1]!=0 for c in coeffs):
+            if verbose:
+                print("*** C6, not S3 over K")
             return False
         h = Kx([c[0] for c in coeffs])
         if verbose:
             print("h = {}".format(h))
         if h.discriminant().is_square():
             if verbose:
-                print("...discarding as discriminant is square")
+                print("*** C6, not S3 over K (discriminant is square)")
             return False
-        if not h.is_irreducible():
-            if True: # this should not happen
-                print("...!!!!!!!!!!!!!!!discarding as reducible")
-            return False
+        assert h.is_irreducible()
         if verbose:
             print("*** returning {} as valid".format(h))
         return h
