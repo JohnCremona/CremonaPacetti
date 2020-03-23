@@ -29,9 +29,9 @@ def NonCubicSet(K,S, verbose=False):
     primes = primes_iter(K,None)
     T = []
     while A.rank() < d123:
-        p = primes.next()
+        p = next(primes)
         while p.divides(N):
-            p = primes.next()
+            p = next(primes)
         v = vecP(p)
         if verbose:
             print("v={}".format(v))
@@ -67,9 +67,9 @@ def S3primes(K, S, f, verbose=False):
     Ta = Set()
     N = prod(S,1)
     while sum(alpha_flags)<len(alphas):
-        p = primes.next()
+        p = next(primes)
         while p.divides(N):
-            p = primes.next()
+            p = next(primes)
         # Now p is a candidate test prime
         if verbose:
             print("testing P={} (have covered {} alphas so far)".format(p,sum(alpha_flags)))
@@ -77,9 +77,9 @@ def S3primes(K, S, f, verbose=False):
         while not f.change_ring(Fp).is_irreducible():
             if verbose:
                 print("no good, f not irreducible mod p={}".format(p))
-            p = primes.next()
+            p = next(primes)
             while p.divides(N):
-                p = primes.next()
+                p = next(primes)
             Fp = residue_field(p)
         if verbose:
             print("P={} passes first test".format(p))
@@ -103,9 +103,9 @@ def S3primes(K, S, f, verbose=False):
     primes = primes_iter(K,None)
     quartic_flags = [False for _ in quartics]
     while sum(quartic_flags)<len(quartics):
-        p = primes.next()
+        p = next(primes)
         while p.divides(N):
-            p = primes.next()
+            p = next(primes)
         # Now p is a candidate test prime
         Fp = residue_field(p)
         for i,h in enumerate(quartics):

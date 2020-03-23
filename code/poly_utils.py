@@ -52,7 +52,7 @@ def rescale(f):
     """
     d = f.denominator()
     if d==1:
-	return f
+        return f
     x = f.parent().gen()
     n = f.degree()
     return d**n*f(x/d)
@@ -75,7 +75,7 @@ def pol_simplify(f, use_polredabs=False, debug=False):
 
     # one factor of h over K will define the same relative extension
     # of K as the original.  We return the first such:
-    new_f = (p for p,e in h.change_ring(K).factor() if K.extension(p,'b_').is_isomorphic_relative(L)).next()
+    new_f = next(p for p,e in h.change_ring(K).factor() if K.extension(p,'b_').is_isomorphic_relative(L))
     if debug:
         print("{} ---> {}".format(f,new_f))
         assert K.extension(new_f,'b_').is_isomorphic_relative(L)

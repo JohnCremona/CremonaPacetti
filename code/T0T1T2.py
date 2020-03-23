@@ -222,15 +222,15 @@ def get_T1(K, S, unit_first=True, verbose=False):
    T1 = []
    A = Matrix(GF(2),0,len(Sx))
    primes = primes_iter(K,1)
-   p = primes.next()
+   p = next(primes)
 # Repeat the following until A has full rank: take the next prime p
 # from the iterator, skip if it divides N (=product over S), form the
 # vector v, and keep p and append v to the bottom of A if it increases
 # the rank:
    while A.rank() < r:
-      p = primes.next()
+      p = next(primes)
       while p.divides(N):
-         p = primes.next()
+         p = next(primes)
       if verbose:
          print("A={} with {} rows and {} cols".format(A,A.nrows(),A.ncols()))
       v = vector(alphalist(p, Sx))
@@ -279,11 +279,11 @@ def get_T2(K, S, unit_first=True, verbose=False):
    N = prod(S,1)
    T2 = {}
    primes = primes_iter(K,1)
-   p = primes.next()
+   p = next(primes)
    while len(T2)<r+r2:
-      p = primes.next()
+      p = next(primes)
       while p.divides(N):
-         p = primes.next()
+         p = next(primes)
       # Compute the values alpha_p(Delta) for Delta in Sx:
       ro = alphalist(p,Sx)
       # Compute the set I(P) of i for which alpha_p(Delta_i)=1:
