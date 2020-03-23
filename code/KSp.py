@@ -45,7 +45,7 @@
 # are subsidiary utilities.  Some of these are only to allow the same
 # code to work over QQ as over any number field.
 
-from sage.all import Matrix, GF, prod, VectorSpace, ProjectiveSpace, QQ, ZZ
+from sage.all import Matrix, GF, prod, VectorSpace, ProjectiveSpace, QQ, ZZ, Set
 
 def IdealGenerator(I):
     r"""Return the generator of a principal ideal.
@@ -173,6 +173,12 @@ def coords_in_U_mod_p(u,U,p):
         co = co[1:]
     return  [c%p for c in co]
 
+def uniquify(S):
+    r"""
+    Return a list of the unique elements of S.
+    """
+    return list(Set(S))
+
 def basis_for_p_cokernel(S,C,p):
     r"""Return a basis for the group of ideals supported on S (mod
     p-powers) whose class in the class group C is a p'th power,
@@ -230,7 +236,7 @@ def selmer_group_projective(K,S,p):
       an option.
 
   """
-    KSgens = K.selmer_group(S=S, m=p)
+    KSgens = K.selmer_group(S=uniquify(S), m=p)
     for ev in ProjectiveSpace(GF(p),len(KSgens)-1):
         yield prod([q ** e for q, e in zip(KSgens, list(ev))], K.one())
 
@@ -268,8 +274,9 @@ def pSelmerGroup(K, S, p, debug=False):
       space ``KSp``.
 
     """
-    # Input check: p and all P in S must be prime.
+    # Input check: p and all P in S must be prime.  Remove any repeats in S.
 
+    S = uniquify(S)
     if not all(P.is_prime() for P in S):
         raise ValueError("elements of S must all be prime")
     if not p.is_prime():

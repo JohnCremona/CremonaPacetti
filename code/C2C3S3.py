@@ -42,7 +42,7 @@
 
 from sage.all import ProjectiveSpace, polygen, proof, ZZ, QQ
 from poly_utils import pol_simplify
-from KSp import pSelmerGroup, is_S_unit, unramified_outside_S
+from KSp import pSelmerGroup, is_S_unit, unramified_outside_S, uniquify
 
 # The following line means that class groups, etc, are computed
 # non-rigorously (assuming GRH) which makes everything run faster.
@@ -73,6 +73,7 @@ def C2_extensions(K,S):
        may be ramified at primes dividing 2 not in `S`, so we need to
        do an additional check.
     """
+    S = uniquify(S)
     x = polygen(K)
     # if some primes above 2 are not in S then a further check is required
     if is_S_unit(K(2),S):
@@ -110,6 +111,7 @@ def C3_extensions(K,S, verbose=False, debug=False):
        check. In the general case we need to work harder: we work over
        `K(\zeta_3)` and then descend.
     """
+    S = uniquify(S)
     x = polygen(K)
     if verbose:
         print("finding C3 extensions over {} unramified outside {}".format(K,S))
@@ -236,6 +238,7 @@ def S3_extensions_with_resolvent(K,S,M, verbose=False):
     which the quadratic subfield of the splitting field is `M`.
 
     """
+    S = uniquify(S)
     if verbose:
         print("finding S3 extensions over {} unramified outside {} with quadratic resolvent {}".format(K,S,M))
 
@@ -382,6 +385,7 @@ def S3_extensions(K,S, verbose=False):
 
     We return a list of pairs (h,L) where h is the cubic and L its splitting field.
     """
+    S = uniquify(S)
     if verbose:
         print("finding S3 extensions over {} unramified outside {}".format(K,S))
     C2_extns = [K.extension(f, 't2') for f in C2_extensions(K,S)]

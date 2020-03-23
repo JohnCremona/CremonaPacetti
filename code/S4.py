@@ -8,7 +8,7 @@
 from sage.all import polygen, QQ, ZZ, Set
 from poly_utils import pol_simplify
 from C2C3S3 import C2_extensions, C3_extensions, S3_extensions_with_resolvent, S3_extensions
-from KSp import is_S_unit, unramified_outside_S, pSelmerGroup
+from KSp import is_S_unit, unramified_outside_S, pSelmerGroup, uniquify
 
 #
 ############## V4 (biquadratic extensions) ###############################
@@ -92,6 +92,7 @@ def C4_extensions_with_quadratic(K,S,M, verbose=False):
     r"""Return all C4 extensions of K containing the quadratic
     extension M of K, unramified outside S.
     """
+    S = uniquify(S)
     if verbose:
         print("finding C4 extensions of {} over {} unramified outside {}".format(K,M,S))
     SM = sum([M.primes_above(P) for P in S],[])
@@ -124,6 +125,7 @@ def D4_extensions_with_quadratic(K,S,M, verbose=False):
     extensions of the quadratic field M, where M is also unramified
     outside S.
     """
+    S = uniquify(S)
     if verbose:
         print("finding D4 extensions of {} over {} unramified outside {}".format(K,M,S))
 
@@ -136,7 +138,6 @@ def D4_extensions_with_quadratic(K,S,M, verbose=False):
     conj_ind = lambda b: betas2.index(from_MS2(to_MS2(sigma(b))))
     betas = [b for i,b in enumerate(betas2) if not conj_ind(b)<i]
     # remove those whose norm is a square in M:
-    d = M.defining_polynomial().discriminant()
     norms  = [b.relative_norm() for b in betas]
     betas = [b for b,n in zip(betas,norms) if not (n).is_square()]
     #print("M = {}".format(M))
@@ -156,6 +157,7 @@ def D4_extensions_with_quadratic_V4minus(K,S,M, verbose=False):
     V4minus extensions of the quadratic field M, where M is also
     unramified outside S.
     """
+    S = uniquify(S)
     if verbose:
         print("finding D4 (V4-) extensions of {} over {} unramified outside {}".format(K,M,S))
 
@@ -202,6 +204,7 @@ def A4_extensions_with_resolvent(K,S,M, verbose=False):
     autos = M.automorphisms()
     name = "S4" if len(autos)==1 else "A4"
 
+    S = uniquify(S)
     if verbose:
         print("finding {} extensions of {} over {} unramified outside {}".format(name,K,M,S))
 
