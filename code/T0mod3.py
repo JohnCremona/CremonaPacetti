@@ -94,6 +94,8 @@ def get_T0_mod3(K,S, flist=None, verbose=False):
 # must not be in S or divide the discriminant of any of the quartics.
    while ij:
       i,j = ij
+      #print("Testing i,j = {}".format(ij))
+      #print("Quartics: {}, {}".format(flist[i],flist[j]))
       if j==n:
          p = get_p_1(K,flist[i],N, lam3)
       else:
