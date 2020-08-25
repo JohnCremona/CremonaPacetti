@@ -87,7 +87,7 @@ def display_string(data, ell=2):
     """Display splitting field info for one irreducible as a string
     """
     pol = data['pol']
-    disc = NumberField(pol,'a').discriminant().factor()
+    disc = pol.splitting_field('a').discriminant().factor()
     return "{} mod {}:  {} field with polynomial {} and discriminant {}".format(
         data['label'], ell, data['gal'], pol, disc)
 

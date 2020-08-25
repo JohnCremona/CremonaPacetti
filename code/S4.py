@@ -35,7 +35,9 @@ def V4_extensions_with_quadratic(K,S,M, verbose=False):
     indices = [i for i in range(len(ds)) if ds[i]!=D and dMs.index(ds[i])<i]
     ds = [ds[i] for i in indices]
     x = polygen(K)
-    return [pol_simplify(x**4 - 2*(D+d)*x**2 + (D-d)**2) for d in ds]
+    #return [pol_simplify(x**4 - 2*(D+d)*x**2 + (D-d)**2) for d in ds]
+    #return [x**4 - 2*(D+d)*x**2 + (D-d)**2 for d in ds]
+    return [x**4 - (D*d+d)*x**2 + (D*d**2) for d in ds]
 
 def V4_extensions(K,S, verbose=False):
     r"""Return all V4 extensions of K unramified outside S.  The
@@ -152,10 +154,18 @@ def D4_extensions_with_quadratic(K,S,M, verbose=False):
     quartics = [q for q in quartics if unramified_outside_S(K.extension(q,'c_'),S,p=2)]
     return quartics
 
-def D4_extensions_with_quadratic_V4minus(K,S,M, verbose=False):
-    r"""Return all D4 extensions of K unramified outside S which are
-    V4minus extensions of the quadratic field M, where M is also
-    unramified outside S.
+def D4_extensions_with_quadratic_V4(K,S,M, sg="V4plus", verbose=False):
+    r"""Return all D4 extensions of K unramified outside S which are V4
+    extensions of the quadratic field M, where M is also unramified
+    outside S.
+
+    If sg is "V4plus" then the quartic returned have the same
+    discriminant as M (mod squares) so M is the fixed field of the
+    intersection of D4 with A4.
+
+    If sg is "V4minus" then the fixed field of the intersection of D4
+    with A4 is not M.
+
     """
     S = uniquify(S)
     if verbose:
@@ -170,7 +180,8 @@ def D4_extensions_with_quadratic_V4minus(K,S,M, verbose=False):
     # remove conjugates (mod squares):
     conj_ind = lambda b: betas2.index(from_MS2(to_MS2(sigma(b))))
     betas = [b for i,b in enumerate(betas2) if not conj_ind(b)<i]
-    # remove those whose norm is a square in M:
+
+    # remove those whose norm is a square in M as these will give quartic Galois over K:
     D = M.defining_polynomial().discriminant()
     norms  = [b.relative_norm() for b in betas]
     betas = [b for b,n in zip(betas,norms) if not n.is_square() and not (D*n).is_square()]
@@ -178,7 +189,17 @@ def D4_extensions_with_quadratic_V4minus(K,S,M, verbose=False):
     traces = [b.trace() for b in betas] #change for K = QQ (maybe)
     x = polygen(K)
     #print("Betas={}".format(enumerate(betas)))
-    return [pol_simplify(x**4-t*x**2+n) for t,n in zip(traces,norms)]#, betas
+
+    # The D4 field is K(sqrt(beta),sqrt(n)) with V4 subfield
+    # K(sqrt(D),sqrt(n))=M(sqrt(n).  We pick a generator whose min
+    # poly is in the required square class.
+    
+    if sg=="V4plus":
+        # these quartics have discriminant t^2-4n = D mod squares
+        return [pol_simplify(x**4-2*t*x**2+(t**2-4*n)) for t,n in zip(traces,norms)]
+    if sg=="V4minus":
+        # these quartics have discriminant n mod squares
+        return [pol_simplify(x**4-t*x**2+n) for t,n in zip(traces,norms)]#, betas
 
 def D4_extensions(K,S, verbose=False):
     r"""Return all D4 extensions of K unramified outside S.

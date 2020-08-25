@@ -30,21 +30,28 @@
 from sage.all import GF, prod, polygen
 from T0T1T2 import equal_vecs, lamvec, get_p_1, get_p_2
 
-# The function lamda(f,p) for quartics
-
-def lam3(f,p):
-    #print("f={}".format(f))
-    if f.degree()<4:
-        return 0
+def mod_p_fact_degs(f,p):
+    """
+    Return the sorted list of degrees of the factors of f mod p
+    """
     try:
         Fp=GF(p)
     except TypeError:
         Fp=p.residue_field()
     degs = [g.degree() for g,e in f.change_ring(Fp).factor()]
-    #print("{} mod {} has factors of degree {}: {}".format(f,p,degs,f.change_ring(GF(p)).factor()))
-    l = int( degs in [[1,1,1,1],[1,3],[3,1],[4]] )
-    if not l:
-        assert degs in [[2,2],[1,1,2],[1,2,1],[2,1,1]]
+    #print("{} mod {} has factors of degree {}: {}".format(f,p,degs,f.change_ring(Fp).factor()))
+    degs.sort()
+    return degs
+    
+# The function lamda(f,p) for quartics
+
+def lam3(f,p):
+    #print("f={}, p={}".format(f,p))
+    if f.degree()<4:
+        return 0
+    degs = mod_p_fact_degs(f,p)
+    assert  degs in [[1,1,1,1],[1,3],[4],[2,2],[1,1,2]]
+    l = int(max(degs)!=2) # =1 for [1,1,1,1],[1,3],[4] else 0
     #print("lam3({}, {}) = {}".format(f,p,l))
     return l
 
