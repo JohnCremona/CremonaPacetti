@@ -1,11 +1,12 @@
-#
-# For K a number field, S a finite set of primes of K and G in
-# {C4,D4,V4,A4,S4} we find all extensions of K with Galois group G and
-# unramified outside S.  In the case of C4, A4, S4 it is possible to
-# specify the cubic resolvent.  D4 extensions to be added later.
-#
+r"""For K a number field, S a finite set of primes of K and G in
+{C4,D4,V4,A4,S4} we find all extensions of K with Galois group G and
+unramified outside S.  In the case of C4, A4, S4 it is possible to
+specify the cubic resolvent.  It is also possible to specify the
+discriminant field.  In all cases the output is a list of quartics,
+always irreducible except in the case of V4.
+"""
 
-from sage.all import polygen, QQ, ZZ, Set
+from sage.all import polygen, QQ, ZZ, Set, PolynomialRing
 from poly_utils import pol_simplify
 from C2C3S3 import C2_extensions, C3_extensions, S3_extensions_with_resolvent, S3_extensions
 from KSp import is_S_unit, unramified_outside_S, pSelmerGroup, uniquify
@@ -13,33 +14,170 @@ from KSp import is_S_unit, unramified_outside_S, pSelmerGroup, uniquify
 #
 ############## V4 (biquadratic extensions) ###############################
 
-def V4_extensions_with_quadratic(K,S,M, verbose=False):
-    r"""Return all V4 extensions of K unramified outside S which contain
-    the quadratic extension M (also unramified outside S).  The
-    polynomials returned are irreducible.
-    """
-    C2s = C2_extensions(K,S)
-    if M.is_relative():
-        D = M.relative_discriminant()
-    else:
-        D = M.discriminant()
+r""" A V4 extension M/K has the form K(sqrt(d1),sqrt(d2),sqrt(d3)) with
+d3=d1*d2 mod squares and d1,d2 independent mod squares.
 
-    if K==QQ:
-        D=D.squarefree_part()
-    ds = [f.discriminant() for f in C2s]
+We provide two options:
+ (1) specify a given quadratic subfield K(sqrt(d1)) (default None);
+ (2) specify a given discriminant d (Default d=1).
+
+If both are given and d!=d1 then the field is unique.
+
+An irreducible quartic with splitting field M such as the minimal
+  polynomial X^4-2(d1+d2)X^2+(d1-d2)^2 of sqrt(d1)+sqrt(d2) has square
+  discriminant.
+
+To have discriminant field K(sqrt(d3)), for example, we need a
+reducible quartic (X^2-d1)(X^2-d2).
+
+We may optionally specify a given quadratic subfield
+"""
+
+def disc_index(ds, D):
+    """
+    Return the index of D in the list ds, mod squares.
+    """
+    for i,d in enumerate(ds):
+        if D==d: # special case
+            return i
+        if (D*d).is_square():
+            return i
+    return -1
+    
+def discs_mod_D(ds, D):
+    """Given a list of discriminants which are the nontrivial elements of
+    some finite subgroup G of K^*/(K^*)^2, and an element D of G,
+    return a list of nontrivial coset representatives of G/<D>.
+    """
+    if D.is_square():
+        return ds
+    
+    K = D.parent()
     if K==QQ:
         ds = [d.squarefree_part() for d in ds]
-    dMs = [d*D for d in ds]
-    if K==QQ:
-        dMs = [d.squarefree_part() for d in dMs]
-    indices = [i for i in range(len(ds)) if ds[i]!=D and dMs.index(ds[i])<i]
-    ds = [ds[i] for i in indices]
-    x = polygen(K)
-    #return [pol_simplify(x**4 - 2*(D+d)*x**2 + (D-d)**2) for d in ds]
-    #return [x**4 - 2*(D+d)*x**2 + (D-d)**2 for d in ds]
-    return [x**4 - (D*d+d)*x**2 + (D*d**2) for d in ds]
+    iD = disc_index(ds,D)
+    if iD == -1:
+        raise RuntimeError("discriminant {} is not in the list {} mod squares".format(D,ds))
 
-def V4_extensions(K,S, verbose=False):
+    # The map d -> d*D mod squares is a product of transpositions on
+    # ds (mod squares) with no fixed points.  We return those d for
+    # which d*D is later in the list.
+
+    # This one-liner works but does not catch problems:
+
+    #return [d for i,d in enumerate(ds) if disc_index(ds,d*D)<i]
+
+    perm = [disc_index(ds,d*D) for d in ds]
+    if any([i != iD and j == -1 for i,j in enumerate(perm)]):
+        raise RuntimeError("discriminant list {} not closed under multiplication by {} mod squares".format(ds,D))
+    return [d for i,d in enumerate(ds) if i != iD and perm[i] < i]
+
+def V4_extensions(K,S, L=None, d=1, verbose=False):
+    r"""Return quartics whose splitting field M is a V4 extension of K
+    unramified outside S.
+
+    If L is not None it should be a quadratic extension of K,
+    unramified outside S, and the quartics returned are restricted to
+    those for which M contains L.  Alternatively, L can be an element
+    D of K^* such that K(sqrt(D)) is unramified outside S.
+
+    If d is not 1 then K(sqrt(d)) must be unramified outside S and the
+    quartics returned will have discriminant d, so they will be
+    reducible and their splitting fields M will contain K(sqrt(d)).
+
+    If both options are given and L != K(sqrt(d)), then exactly one,
+    reducible, quartic will be returned discriminant d and splitting
+    field with M=L(sqrt(d)).
+
+    """
+    Kx = PolynomialRing(K, 'x')
+    d = K(d)
+
+    if not L is None: # handle two optons and check validity
+        if L in K:
+            D = L
+            L = K.extension(Kx([-D,0,1]), 't1')
+            if not unramified_outside_S(L, S):
+                raise ValueError("invalid discriminant D={} (quadratic not unramified outside {})".format(D, S))
+        else:
+            if L.is_relative():
+                D = L.relative_discriminant()
+                Ldeg = L.relative_degree()
+            else:
+                D = L.discriminant()
+                Ldeg = L.degree()
+            if Ldeg != 2:
+                raise ValueError("invalid subfield L={} (not quadratic)".format(L))
+            if not unramified_outside_S(L, S):
+                raise ValueError("invalid subfield L={} (quadratic but not unramified outside {})".format(L, S))
+            if K==QQ:
+                D=D.squarefree_part()
+
+        if d != 1 and not (D*d).is_square():
+            # In this case we do not need to compute all the
+            # quadratics since there is only one V4, but we should
+            # check that K(sqrt(d)) is unramified outside S.
+            L = K.extension(Kx([-d,0,1]), 't1')
+            if not unramified_outside_S(L, S):
+                raise ValueError("invalid discriminant d={} (quadratic not unramified outside {})".format(d, S))
+            d2 = D*d
+            if K==QQ:
+                d2 = d2.squarefree_part()
+            return [Kx([D*d2, 0, -(D+d2), 0, 1])]
+                   # (x^2-D)(x^2-d2), disc=d
+        
+        C2s = C2_extensions(K,S)
+        ds = [f.discriminant() for f in C2s]
+        if K==QQ:
+            ds = [d1.squarefree_part() for d1 in ds]
+
+        d1s = discs_mod_D(ds, D)
+        print("ds:  {}".format(ds))
+        print("d1s: {}".format(d1s))
+        if d==1:
+            return [pol_simplify(Kx([(D-d1)**2, 0, -2*(D+d1), 0, 1])) for d1 in d1s]
+                   # irreducible, disc=1
+        else: # d==D
+            d2s = [d1*d for d1 in d1s]
+            if K==QQ:
+                d2s = [d2.squarefree_part() for d2 in d2s]
+            return [Kx([d1*d2, 0, -(d1+d2), 0, 1]) for d1,d2 in zip(d1s,d2s)]
+                   # (x^2-d1)(x^2-d2), disc=d=D
+
+    # Now L is None
+    C2s = C2_extensions(K,S)
+    ds = [f.discriminant() for f in C2s]
+    if K==QQ:
+        ds = [d1.squarefree_part() for d1 in ds]
+
+    if d==1:
+        # We want to enumerate the 2-dimensional subspaces, using just
+        # one pair [a,b] from each unordered triple {a,b,c} with c=a*b.
+        # To do this we only use [a,b] when i(a)<i(b)<i(c)
+        
+        ab_pairs = []
+        for i,a in enumerate(ds):                 # a runs through all
+            for j,b in enumerate(ds[i+1:], i+1):  # b is after a in the list
+                c = a*b
+                if K==QQ:
+                    c = c.squarefree_part()
+                k = disc_index(ds, c)
+                if k>j:                           # use c only if it is after b
+                    print((i,j,k))
+                    ab_pairs.append([a,b])
+        #print("ab pairs = {}".format(ab_pairs))
+        return [pol_simplify(Kx([(a-b)**2, 0, -2*(a+b), 0, 1])) for a,b in ab_pairs]
+                   # irreducible, disc=1
+    else:
+        d1s = discs_mod_D(ds, d) # will check that d is in ds mod squares
+        d2s = [d1*d for d1 in d1s]
+        if K==QQ:
+            d2s = [d2.squarefree_part() for d2 in d2s]
+        return [Kx([d1*d2, 0, -(d1+d2), 0, 1]) for d1,d2 in zip(d1s,d2s)]
+                  # (x^2-d1)(x^2-d2), disc=d
+                    
+    
+def xxxV4_extensions(K,S, verbose=False):
     r"""Return all V4 extensions of K unramified outside S.  The
     polynomials returned are irreducible.
     """
@@ -129,7 +267,7 @@ def D4_extensions_with_quadratic(K,S,M, verbose=False):
     """
     S = uniquify(S)
     if verbose:
-        print("finding D4 extensions of {} over {} unramified outside {}".format(K,M,S))
+        print("finding D4 extensions of {}, cyclic over {}, unramified outside {}".format(K,M,S))
 
     SM = sum([M.primes_above(P) for P in S],[])
     sigma = M.automorphisms()[1]
@@ -169,7 +307,7 @@ def D4_extensions_with_quadratic_V4(K,S,M, sg="V4plus", verbose=False):
     """
     S = uniquify(S)
     if verbose:
-        print("finding D4 (V4-) extensions of {} over {} unramified outside {}".format(K,M,S))
+        print("finding D4 ({}) extensions of {} over {} unramified outside {}".format(sg,K,M,S))
 
     SM = sum([M.primes_above(P) for P in S],[])
     sigma = M.automorphisms()[1]
@@ -196,10 +334,12 @@ def D4_extensions_with_quadratic_V4(K,S,M, sg="V4plus", verbose=False):
     
     if sg=="V4plus":
         # these quartics have discriminant t^2-4n = D mod squares
-        return [pol_simplify(x**4-2*t*x**2+(t**2-4*n)) for t,n in zip(traces,norms)]
+        quartics = [pol_simplify(x**4-2*t*x**2+(t**2-4*n)) for t,n in zip(traces,norms)]
     if sg=="V4minus":
         # these quartics have discriminant n mod squares
-        return [pol_simplify(x**4-t*x**2+n) for t,n in zip(traces,norms)]#, betas
+        quartics = [pol_simplify(x**4-t*x**2+n) for t,n in zip(traces,norms)]#, betas
+    quartics = [q for q in quartics if unramified_outside_S(K.extension(q,'c_'),S,p=2)]
+    return quartics
 
 def D4_extensions(K,S, verbose=False):
     r"""Return all D4 extensions of K unramified outside S.
