@@ -40,7 +40,7 @@
 #
 #
 
-from sage.all import ProjectiveSpace, polygen, proof, ZZ, QQ
+from sage.all import ProjectiveSpace, polygen, proof, ZZ, QQ, PolynomialRing
 from poly_utils import pol_simplify
 from KSp import pSelmerGroup, is_S_unit, unramified_outside_S, uniquify
 
@@ -216,9 +216,15 @@ def C3_extensions(K,S, verbose=False, debug=False):
 
 ############## S3 (non-cyclic cubic extensions) ###############################
 
-def S3_extensions_with_resolvent(K,S,M, verbose=False):
-    r"""Return all `S_3` extensions of ``K`` unramified outside ``S`` with
-    quadratic resolvent field ``M``.
+def S3_extensions(K,S, D=None, check_D=True, verbose=False):
+    r"""Return irreducible cubics whose splitting fields are `S_3`
+    extensions of ``K`` unramified outside ``S``.
+
+    If ``D`` is not None then it must be an element of $K^*$ such that
+    $K(\sqrt(D))$ is a quadratic extension unramified outside ``S``,
+    and only cubics with discriminant ``D`` (mod squares) are
+    returned.  This condition on ``D`` is checked unless check_D is
+    False.
 
     INPUT:
 
@@ -226,31 +232,48 @@ def S3_extensions_with_resolvent(K,S,M, verbose=False):
 
     - ``S`` (list) -- a list of prime ideals in ``K``, or primes.
 
-    - ``M`` (number field) -- a relative number field over ``K``
-      unramified outside ``S``.
+    - ``D`` (number field element) -- a nonzero element of ``K`` such
+      that $K(\sqrt{D})$ is quadratic is unramified outside ``S``.
 
     - ``verbose`` (boolean, default ``False``) -- verbosity flag.
 
     OUTPUT:
 
     (list) A list of monic polynomials of degree 3 in `K[x]` defining
-    all non-Galois cubic extensions of `K` unramified outside `S` for
-    which the quadratic subfield of the splitting field is `M`.
+    all non-Galois cubic extensions of `K` unramified outside `S` (or
+    just those whose disciminant is ``D`` if ``D`` is given).
 
     """
     S = uniquify(S)
+    Kx = PolynomialRing(K, 'x')
     if verbose:
-        print("finding S3 extensions over {} unramified outside {} with quadratic resolvent {}".format(K,S,M))
+        if D:
+            print("finding S3 extensions over {} unramified outside {} with discriminant {}".format(K,S,D))
+        else:
+            print("finding S3 extensions over {} unramified outside {}".format(K,S))
+
+
+    if not D:
+        Ds = [f.discriminant() for f in C2_extensions(K,S)]
+        if K is QQ:
+            Ds = [d.squarefree_part() for d in Ds]
+        return sum([S3_extensions(K,S, d, verbose) for d in Ds], [])
+
+    D = K(D)
+    M = K.extension(Kx([-D,0,1]), 't1')
+    if check_D:
+        if not unramified_outside_S(M, S):
+            raise ValueError("invalid discriminant D={} (quadratic not unramified outside {})".format(D, S))
 
     # compute the generator of Gal(M/K)
-    g = [e for e in M.automorphisms() if e(M.gen()) != M.gen()][0]
+    g = next(e for e in M.automorphisms() if e(M.gen()) != M.gen())
 
     # find the primes of M above those in S
     SM = sum([M.primes_above(p) for p in S],[])
 
     # if we add in primes above 3 here then the C3 extension search
     # need not bother about checking ramification above 3, so will be
-    # faster.  We'll do that later where it will be quick as not so
+    # faster.  We'll do that check later where it will be quick as not so
     # relative.
     for P in M.primes_above(3):
         if not P in SM:
@@ -270,7 +293,6 @@ def S3_extensions_with_resolvent(K,S,M, verbose=False):
     # Galois and have group S3 (not C6):
 
     Mx = cubics[0].parent()
-    Kx = M.defining_polynomial().parent()
 
     # test function for cubics in M[x].  If they define S3 Galois
     # extensions of K then we return a cubic over K with the same
@@ -380,17 +402,6 @@ def S3_extensions_with_resolvent(K,S,M, verbose=False):
         print("polys  (after final test, after simplification): {}".format(polys))
     return polys
 
-def S3_extensions(K,S, verbose=False):
-    r"""Return all S3 extensions of K unramified outside S.
-
-    We return a list of pairs (h,L) where h is the cubic and L its splitting field.
-    """
-    S = uniquify(S)
-    if verbose:
-        print("finding S3 extensions over {} unramified outside {}".format(K,S))
-    C2_extns = [K.extension(f, 't2') for f in C2_extensions(K,S)]
-    return sum([S3_extensions_with_resolvent(K,S,M,verbose) for M in C2_extns],[])
-
 ############## C3 & S3 extensions ###############################
 
 def C3S3_extensions(K,S, verbose=False):
@@ -409,5 +420,5 @@ def C3S3_extensions(K,S, verbose=False):
     (list) A list of monic polynomials of degree 3 in `K[x]` defining
     all Galois or non-Galois cubic extensions of `K` unramified outside `S`.
     """
-    return C3_extensions(K,S,verbose) + S3_extensions(K,S,verbose)
+    return C3_extensions(K,S, verbose=verbose) + S3_extensions(K,S, verbose=verbose)
 
