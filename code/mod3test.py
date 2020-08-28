@@ -1,4 +1,4 @@
-from sage.all import QQ, QuadraticField, GF, NumberField, DirichletGroup, prime_pi, Primes
+from sage.all import QQ, GF, DirichletGroup, prime_pi, Primes
 
 from read_modell_data import read_data, DATA_DIR
 from mod2test import display_string, display_all
@@ -7,8 +7,8 @@ assert display_all    # for pyflakes, since not used in this file
 
 from T0T1T2 import get_T1
 from T0mod3 import get_T0_mod3, mod_p_fact_degs
-from S4 import D4_extensions_with_quadratic_V4, S4_extensions_with_quadratic, V4_extensions_with_quadratic
-assert S4_extensions_with_quadratic
+from S4 import D4_extensions, S4_extensions, V4_extensions
+#assert S4_extensions_with_quadratic
 
 try:
     assert len(quartic_lists)
@@ -17,25 +17,25 @@ except:
 
 def S4D4V4_extensions(S, D, verbose=True):
     # NB we know that D<0 so (a) nontrivial and (b) C4 impossible
-    M = QuadraticField(D,'m')
-    S4s = S4_extensions_with_quadratic(QQ,S,M)
+    S4s = S4_extensions(QQ,S, D=D, check_D=False)
     assert all([f.discriminant().squarefree_part()==D for f in S4s])
     if verbose:
         print("S={}, D={}: {} S4 quartics".format(S,D,len(S4s)))
+        print(S4s)
 
-    D4s = D4_extensions_with_quadratic_V4(QQ,S,M, sg="V4plus")
-    #print("D4 quartic discriminants:")
-    #print([f.discriminant().factor() for f in D4s])
+    D4s = D4_extensions(QQ,S, d1=D, check_d1=False)
     assert all([f.discriminant().squarefree_part()==D for f in D4s])
     if verbose:
         print("S={}, D={}: {} D4 quartics".format(S,D,len(D4s)))
+        print(D4s)
 
-    V4s = V4_extensions_with_quadratic(QQ,S,M)
-    # print("V4 quartic discriminants:")
-    # print([f.discriminant().squarefree_part() for f in V4s])
-    # assert all([f.discriminant().squarefree_part()==D for f in V4s])
+    # We want quartics defining V4s which have discriminant D (so they
+    # will be reducible)
+    V4s = V4_extensions(QQ,S, D=D, check_D=False)
+    assert all([f.discriminant().squarefree_part()==D for f in V4s])
     if verbose:
         print("S={}, D={}: {} V4 quartics".format(S,D,len(V4s)))
+        print([f.factor() for f in V4s])
 
     return S4s + D4s + V4s
 
@@ -200,7 +200,7 @@ def check1form(data, verbose=False):
             print("v={} for quartic {}".format(v,q))
             
     # Compute test vector.  Here ap=+1,-1 map to 1 and 0 to 0
-    v = [int(tr(p)!=0) for p in T0]
+    v = [int(tr(p0)!=0) for p0 in T0]
     if verbose:
         print("test vector = {}".format(v))
         
@@ -225,7 +225,8 @@ def check1form(data, verbose=False):
         data['gal'] = None
         data['reducible'] = None
         print("Problem: reducibility not established but no quartic matches")
-        raise RuntimeError
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        #raise RuntimeError
         return data
         
 def run(fname, dir=DATA_DIR, verbose=False):
@@ -248,5 +249,10 @@ def run(fname, dir=DATA_DIR, verbose=False):
     V4s = [r for r in irreds if r['gal']=='V4']
     nV4 = len(V4s)
     print("{} forms are irreducible with splitting field V4".format(nV4))
-    return S4s, D4s, V4s
+
+    unknowns = [r for r in irreds if not r['gal']]
+    nunks = len(unknowns)
+    if nunks:
+        print("{} forms are irreducible but we found no splitting field".format(nunks))
+    return S4s, D4s, V4s, unknowns
 
