@@ -169,6 +169,46 @@ def check1form(data, verbose=False):
         data['reducible'] = True
         return data
 
+    # Now we try to eliminate more remaining quartics by matching
+    # factorization patterns to Frobenius polynomials:
+    #
+    # [4]:                |ap|=1, chi=-1
+    # [1,3] or [1,1,1,1]: |ap|=1, chi=+1
+    # [1,1,2]:            ap=0,   chi=-1
+    # [2,2]:              ap=0,   chi=+1
+
+    fact_pats = {(1, 2): [[4]],
+                 (1, 1): [[1,3],[1,1,1,1]],
+                 (0, 2): [[1,1,2]],
+                 (0, 1): [[2,2]]}
+                 
+    maxp = 100
+    Sx = Set(sum([f.discriminant().support() for f in quartics2], S))
+    #print("Not using primes in {}".format(Sx))
+    for p in primes(maxp):
+        if p==2 or p in Sx:
+            continue
+        (t, d) = (int(tr(p)!=0), det_char(p))
+        # for f in quartics2:
+        #     print("p={}, f={}, [f modp]={}, (t,d)={} -> {}".format(p,f,mod_p_fact_degs(f,p),(t,d), fact_pats[(t,d)]))
+        quartics2 = [f for f in quartics2 if mod_p_fact_degs(f,p) in fact_pats[(t,d)]]
+        if verbose:
+            print("After checking p={}, {} possible quartics remain".format(p,len(quartics2)))
+        if not quartics2: break
+    if verbose:
+        print("After testing all p<{}, {} possible quartics remain".format(maxp,len(quartics2)))
+        
+    if not quartics2:
+        # If we get here, out list of quartics cannot have been complete
+        data['pol'] = None
+        data['gal'] = None
+        data['reducible'] = None
+        print("Problem: reducibility not established but no quartic matches")
+        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        #raise RuntimeError
+        return data
+        
+    
     # Otherwise, if just one quartic remains, the representation is
     # irreducible with this kernel polynomial:
     
