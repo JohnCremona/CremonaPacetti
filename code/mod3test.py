@@ -1,4 +1,4 @@
-from sage.all import QQ, GF, DirichletGroup, prime_pi, Primes
+from sage.all import QQ, GF, DirichletGroup, prime_pi, Primes, primes, Set
 
 from read_modell_data import read_data, DATA_DIR
 from mod2test import display_string, display_all
@@ -84,8 +84,8 @@ def get_T0mod3data(S, D, quartics):
 def check1form(data, verbose=False):
     assert data['ell'] == 3
     label = data['label']
-    print("==========================================================")
-    print("label = {}".format(label))
+    # print("==========================================================")
+    # print("label = {}".format(label))
     N = data['N']
     S = (3*N).prime_divisors()
     k = data['k']
@@ -163,9 +163,7 @@ def check1form(data, verbose=False):
     # If all quartics have been eliminated, the representation is reducible:
     
     if not irred:
-        if verbose:
-            print("Reducible")
-            print("----------------------------------------------------------")
+        print("{} mod {}: Reducible".format(label, 3))
         data['reducible'] = True
         return data
 
@@ -203,9 +201,10 @@ def check1form(data, verbose=False):
         data['pol'] = None
         data['gal'] = None
         data['reducible'] = None
-        print("Problem: reducibility not established but no quartic matches")
         print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-        #raise RuntimeError
+        print(" label = {} has a problem: reducibility not established but no quartic matches".format(label))
+        #print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+        raise RuntimeError
         return data
         
     
@@ -269,7 +268,7 @@ def check1form(data, verbose=False):
         #raise RuntimeError
         return data
         
-def run(fname, dir=DATA_DIR, verbose=False):
+def run(fname, dir=DATA_DIR, outfilename=None, verbose=False):
     alldata = read_data(fname, 3, dir=dir)
     print("finished reading data: {} newforms".format(len(alldata)))
     res = [check1form(data, verbose=verbose) for data in alldata]
@@ -294,5 +293,8 @@ def run(fname, dir=DATA_DIR, verbose=False):
     nunks = len(unknowns)
     if nunks:
         print("{} forms are irreducible but we found no splitting field".format(nunks))
-    return S4s, D4s, V4s, unknowns
+    if outfilename:
+        display_all(res, 3, outfilename)
+        print("{} lines written to {}".format(len(res), outfilename))
+    return res
 

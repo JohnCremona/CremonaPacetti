@@ -84,8 +84,11 @@ def check1form(data, verbose=False):
     return data
 
 def display_string(data, ell=2):
-    """Display splitting field info for one irreducible as a string
+    """Display splitting field info for one rep as a string
     """
+    if data['reducible']:
+        return "{} mod {}:  reducible".format(data['label'], ell)
+        
     pol = data['pol']
     if pol.is_irreducible():
         L = NumberField(pol,'a')
@@ -110,7 +113,7 @@ def display_all(datalist, ell=2, fname=None):
         for data in datalist:
             print(display_string(data, ell))
     
-def run(fname, dir=DATA_DIR, verbose=False):
+def run(fname, dir=DATA_DIR, outfilename=None, verbose=False):
     alldata = read_data(fname, 2, dir=dir)
     print("finished reading data: {} newforms".format(len(alldata)))
     res = [check1form(data, verbose=verbose) for data in alldata]
@@ -132,4 +135,7 @@ def run(fname, dir=DATA_DIR, verbose=False):
         print("{} forms are irreducible with splitting field S3:".format(len(S3s)))
         # for r in S3s:
         #     display(r)
+    if outfilename:
+        display_all(res, 2, outfilename)
+        print("{} lines written to {}".format(len(res), outfilename))
     return C3s, S3s

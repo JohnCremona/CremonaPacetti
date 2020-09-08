@@ -83,7 +83,7 @@ def get_T0_mod3(K,S, flist=None, verbose=False):
    if verbose:
       print("quartics: {}".format(flist))
 
-# Append a poly with lam3=0
+# Append a poly with lam3=0: note that lam3(f)=0 when deg(f)<4.
    x = polygen(K)
    flist0 = flist + [x**3]
    n = len(flist)
