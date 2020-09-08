@@ -1,6 +1,6 @@
 from sage.all import polygen, ZZ, GF, binomial, Matrix, prod, vector, Set
 from KSp import pSelmerGroup
-from S4 import A4_extensions_with_resolvent
+from S4 import A4S4_extensions
 from T0T1T2 import lam, primes_iter, residue_field
 
 def vec123(K,basis):
@@ -98,7 +98,9 @@ def S3primes(K, S, f, verbose=False):
 
     # Second: primes P such that g mod P is irreducible, for each quartic g with cubic resolvent f:
     L = K.extension(f,'b')
-    quartics = A4_extensions_with_resolvent(K,S,L)
+    quartics = A4S4_extensions(K,S,L)
+    if verbose:
+        print("quartics: {}".format(quartics))
     Tb = Set()
     primes = primes_iter(K,None)
     quartic_flags = [False for _ in quartics]
