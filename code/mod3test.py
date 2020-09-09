@@ -1,10 +1,12 @@
-from sage.all import QQ, GF, DirichletGroup, prime_pi, Primes, primes, Set
+from sage.all import ZZ, QQ, GF, DirichletGroup, prime_pi, Primes, primes, Set, NumberField, Matrix, vector, polygen, prod, PolynomialRing
 
 from read_modell_data import read_data, DATA_DIR
 from mod2test import display_string, display_all
 assert display_string # for pyflakes, since not used in this file
 assert display_all    # for pyflakes, since not used in this file
 
+from poly_utils import pol_simplify
+from KSp import pSelmerGroup
 from T0T1T2 import get_T1
 from T0mod3 import get_T0_mod3, mod_p_fact_degs
 from S4 import D4_extensions, S4_extensions, V4_extensions
@@ -78,6 +80,95 @@ def get_T0mod3data(S, D, quartics):
         # print("{} quartics, size of cached vlist = {}".format(len(quartics),len(T0mod3[SSD][1])))
         pass
     return T0mod3[SSD]
+
+def linear_lift(S, f, det_char, tr, verbose=True):
+    r"""Given f, a quartic defining an S4, D4 or V4- extension unramified
+    outside S with disc(f)=D, and functions det_char and tr from
+    {primes not in S} to F^* and F=GF(3) respectively, which are a
+    blackbox mod-3 representation whose projective kernel is cut out
+    by f, return an octic which cuts out the linear representation.
+
+    """
+    D = f.discriminant()
+    if verbose:
+        print("In linear_lift with f = {}, D = {}".format(f.factor(), D))
+    V4 = not f.is_irreducible()
+    F =  f.splitting_field('a') if V4 else NumberField(f, 'a')
+    assert V4 or not F(D).is_square()
+    SF = sum([F.primes_above(p) for p in S], [])
+    V, alphas, fromV, toV = pSelmerGroup(F, SF, ZZ(2))
+
+    # The alphas are a basis for F(S,2) but we want a basis for F(S,2)/D in the S4 and D4 cases:
+    if not V4:
+        Dcoords = list(toV(F(D)))
+        iD = Dcoords.index(1)
+        if verbose:
+            print("Before factoring out D, we have {} alphas: {}".format(len(alphas),alphas))
+            print("  D={} has coords {} w.r.t. these, so we omit {}".format(D, Dcoords, alphas[iD]))
+        alphas = alphas[:iD] + alphas[iD+1:]
+    r = len(alphas)
+    if verbose:
+        print("{} alphas: {}".format(len(alphas),alphas))
+
+    # Initialize T to be empty and A to be a matric with 0 rows and r=#alphas columns
+    T = []
+    A = Matrix(GF(2),0,r)
+    rA = 0
+    x = polygen(F)
+    for p in Primes():
+        if p in S:
+            continue
+        if mod_p_fact_degs(f,p)==[1,1,2]:
+            continue
+        P = F.prime_above(p)
+        FP = P.residue_field()
+        v = vector([0 if len((x**2-a).roots(FP)) else 1 for a in alphas])
+        A1 = A.stack(v)
+        rA1 = A1.rank()
+        if rA1 > rA:
+            A = A1
+            rA = rA1
+            T.append(p)
+        if rA == r:
+            break
+    if verbose:
+        print("Test set of primes: {}".format(T))
+        print("A-matrix =\n{}".format(A))
+        F3t = PolynomialRing(GF(3), 't')
+        print("Frobenius polys: {}".format([F3t([det_char(p), -tr(p), 1]) for p in T]))
+    b = [0 if (tr(p)%3, det_char(p)%3) in [(0,2), (2,1)] else 1 for p in T]
+    if verbose:
+        print("Test vector: {}".format(b))
+    
+    e = A**(-1)*vector(b)
+    if verbose:
+        print("exponent vector: {}".format(e))
+
+    alpha = prod([a for i,a in enumerate(alphas) if e[i]])
+    ma = alpha.minpoly()
+    if verbose:
+        print("alpha = {} with min poly {}".format(alpha, ma))
+
+    if V4:
+        M = F.extension(x**2-alpha, 'b').absolute_field('c')
+        G = M.galois_group('pari')
+        if verbose:
+            print("V4 case. M={} with Galois group {}".format(M, G))
+        LL = [L for L,i,j in M.subfields() if L.degree()==4 and not L.is_galois()]
+        assert len(LL)==4
+        # This contains two isomorphic copies of each of the sibling quartics
+        # So we pick one with each discriminant (which must be different)
+        DL = Set([L.disc() for L in LL])
+        g = prod([next(L.defining_polynomial() for L in LL if L.disc()==d) for d in DL])
+    else:
+        x = polygen(QQ)
+        g = pol_simplify(ma(x**2), use_polredabs=True)
+        assert g.degree()==8 and g.is_irreducible()
+        G = g.galois_group('pari')
+    if verbose:
+        print("returning octic {} with group {}".format(g, G))
+        print("===============================")
+    return g
 
 # Process a single form data packet:
 
@@ -156,9 +247,9 @@ def check1form(data, verbose=False):
             if verbose and not irred:
                 print("Irreducible via p={}".format(p))
             irred = True
-        else:
-            if verbose:
-                print("Discarding {} using p={}".format(f,p))
+        # else:
+        #     if verbose:
+        #         print("Discarding {} using p={}".format(f,p))
 
     # If all quartics have been eliminated, the representation is reducible:
     
@@ -190,8 +281,8 @@ def check1form(data, verbose=False):
         # for f in quartics2:
         #     print("p={}, f={}, [f modp]={}, (t,d)={} -> {}".format(p,f,mod_p_fact_degs(f,p),(t,d), fact_pats[(t,d)]))
         quartics2 = [f for f in quartics2 if mod_p_fact_degs(f,p) in fact_pats[(t,d)]]
-        if verbose:
-            print("After checking p={}, {} possible quartics remain".format(p,len(quartics2)))
+        # if verbose:
+        #     print("After checking p={}, {} possible quartics remain".format(p,len(quartics2)))
         if not quartics2: break
     if verbose:
         print("After testing all p<{}, {} possible quartics remain".format(maxp,len(quartics2)))
@@ -220,10 +311,18 @@ def check1form(data, verbose=False):
             data['gal'] = gal = 'V4'
         
         if verbose:
-            print("Irreducible: splitting field polynomial = {} with group {}".format(pol,gal))
-            print("----------------------------------------------------------")
+            print("Irreducible: projective splitting field polynomial = {} with group {}".format(pol,gal))
         data['reducible'] = False
+        data['octic'] = octic = linear_lift(S, pol, det_char, tr, verbose=False)
+        longGnames = ["2S_4(8)=GL(2,3)", "D_8(8)=[4]2", "2D_8(8)=[D(4)]2"]
+        shortGnames = ["GL(2,3)", "Ns", "Nn"]
+        M = octic.splitting_field('c') if gal=='V4' else NumberField(octic, 'c')
+        G = M.galois_group('pari')
+        data['lingal'] = Gname = shortGnames[longGnames.index(str(G).split('"')[1])]
+        assert [gal, Gname] in [['S4','GL(2,3)'], ['D4', 'Nn'], ['V4', 'Ns']]
         print(display_string(data,3))
+        if verbose:          
+            print("----------------------------------------------------------")
         return data
         
     # Step 4: Otherwise we find additional distinguishing primes.
@@ -254,9 +353,17 @@ def check1form(data, verbose=False):
             data['gal'] = gal = 'V4'
         if verbose:
             print("Irreducible: splitting field polynomial = {} with group {}".format(pol,gal))
-            print("----------------------------------------------------------")
         data['reducible'] = False
+        data['octic'] = octic = linear_lift(S, pol, det_char, tr, verbose=False)
+        longGnames = ["2S_4(8)=GL(2,3)", "D_8(8)=[4]2", "2D_8(8)=[D(4)]2"]
+        shortGnames = ["GL(2,3)", "Ns", "Nn"]
+        M = octic.splitting_field('c') if gal=='V4' else NumberField(octic, 'c')
+        G = M.galois_group('pari')
+        data['lingal'] = Gname = shortGnames[longGnames.index(str(G).split('"')[1])]
+        assert [gal, Gname] in [['S4','GL(2,3)'], ['D4', 'Nn'], ['V4', 'Ns']]
         print(display_string(data,3))
+        if verbose:
+            print("----------------------------------------------------------")
         return data
     else:
         # If we get here, out list of quartics cannot have been complete
@@ -281,13 +388,13 @@ def run(fname, dir=DATA_DIR, outfilename=None, verbose=False):
     print("{} forms are reducible and {} are irreducible".format(nreds,nirreds))
     S4s = [r for r in irreds if r['gal']=='S4']
     nS4 = len(S4s)
-    print("{} forms are irreducible with splitting field S4".format(nS4))
+    print("{} forms are irreducible and surjective (projective splitting field S4)".format(nS4))
     D4s = [r for r in irreds if r['gal']=='D4']
     nD4 = len(D4s)
-    print("{} forms are irreducible with splitting field D4".format(nD4))
+    print("{} forms are irreducible with image Nn, the normaliser of a Nonsplit Cartan (projective splitting field D4)".format(nD4))
     V4s = [r for r in irreds if r['gal']=='V4']
     nV4 = len(V4s)
-    print("{} forms are irreducible with splitting field V4".format(nV4))
+    print("{} forms are irreducible with image Ns, the normaliser of a Split Cartan (projective splitting field V4)".format(nV4))
 
     unknowns = [r for r in irreds if not r['gal']]
     nunks = len(unknowns)
@@ -297,4 +404,3 @@ def run(fname, dir=DATA_DIR, outfilename=None, verbose=False):
         display_all(res, 3, outfilename)
         print("{} lines written to {}".format(len(res), outfilename))
     return res
-

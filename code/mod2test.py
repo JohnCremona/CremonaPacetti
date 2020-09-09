@@ -98,8 +98,15 @@ def display_string(data, ell=2):
         disc = L.discriminant().factor()
     else:
         disc = L.relative_discriminant().factor()
-    return "{} mod {}:  {} field with polynomial {} and field discriminant {}".format(
-        data['label'], ell, data['gal'], pol, disc)
+    detdisc = pol.discriminant().squarefree_part()
+    if detdisc%4 != 1:
+        detdisc*=4
+    if ell==2:
+        return "{} mod {}:  image {}, splitting field polynomial {}; determinant field discriminant {}".format(
+            data['label'], ell, data['gal'], pol, detdisc)
+    else:
+        return "{} mod {}:  linear image {}, splitting field polynomial {};\n           projective image {}, splitting field polynomial {}; determinant field discriminant {}".format(
+            data['label'], ell, data['lingal'], data['octic'].factor(), data['gal'], pol.factor(), detdisc)
 
 def display_all(datalist, ell=2, fname=None):
     """Display splitting field info for a list of irreducibles, either to
@@ -128,14 +135,14 @@ def run(fname, dir=DATA_DIR, outfilename=None, verbose=False):
     C3s = [r for r in irreds if r['gal']=='C3']
     S3s = [r for r in irreds if r['gal']=='S3']
     if C3s:
-        print("{} forms are irreducible with splitting field C3:".format(len(C3s)))
+        print("{} forms are irreducible with splitting field C3".format(len(C3s)))
         # for r in C3s:
         #     display(r)
     if S3s:
-        print("{} forms are irreducible with splitting field S3:".format(len(S3s)))
+        print("{} forms are irreducible with splitting field S3".format(len(S3s)))
         # for r in S3s:
         #     display(r)
     if outfilename:
         display_all(res, 2, outfilename)
         print("{} lines written to {}".format(len(res), outfilename))
-    return C3s, S3s
+    return res
