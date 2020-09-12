@@ -17,7 +17,7 @@ try:
 except:
     quartic_lists = {}
 
-def S4D4V4_extensions(S, D, verbose=True):
+def S4D4V4_extensions(S, D, verbose=False):
     # NB we know that D<0 so (a) nontrivial and (b) C4 impossible
     S4s = S4_extensions(QQ,S, D=D, check_D=False)
     assert all([f.discriminant().squarefree_part()==D for f in S4s])
@@ -91,21 +91,42 @@ def linear_lift(S, f, det_char, tr, verbose=True):
     """
     D = f.discriminant()
     if verbose:
-        print("In linear_lift with f = {}, D = {}".format(f.factor(), D))
+        print("-------------------------------------------------")
+        print("In linear_lift with f = {}, D = {} ~ {}".format(f.factor(), D, D.squarefree_part()))
     V4 = not f.is_irreducible()
     F =  f.splitting_field('a') if V4 else NumberField(f, 'a')
     assert V4 or not F(D).is_square()
     SF = sum([F.primes_above(p) for p in S], [])
     V, alphas, fromV, toV = pSelmerGroup(F, SF, ZZ(2))
 
-    # The alphas are a basis for F(S,2) but we want a basis for F(S,2)/D in the S4 and D4 cases:
-    if not V4:
-        Dcoords = list(toV(F(D)))
-        iD = Dcoords.index(1)
-        if verbose:
-            print("Before factoring out D, we have {} alphas: {}".format(len(alphas),alphas))
-            print("  D={} has coords {} w.r.t. these, so we omit {}".format(D, Dcoords, alphas[iD]))
-        alphas = alphas[:iD] + alphas[iD+1:]
+    # if not V4:
+    #     GG = {}
+    #     for a in F.selmer_group_iterator(SF,2):
+    #         ma = a.minpoly()
+    #         x = polygen(QQ)
+    #         g = pol_simplify(ma(x**2), use_polredabs=True)
+    #         if g.degree()==8 and g.is_irreducible():
+    #             G = g.galois_group('pari')
+    #             Gname = str(G).split('"')[1]
+    #             if Gname in GG:
+    #                 GG[Gname] +=1
+    #             else:
+    #                 GG[Gname] = 1
+    #             # if Gname == '2S_4(8)=GL(2,3)':
+    #             an = a.norm()
+    #             # if an.is_square() or (D*an).is_square():
+    #             if G.order()==48:
+    #                 print("alpha with norm {} (={} mod squares), coords {}, group={} (order {})".format(a.norm(), a.norm().squarefree_part(), toV(a),
+    #                                                                                                     Gname,G.order()))
+    #             # else:
+    #             #     if a.norm().is_square():
+    #             #         print("bad  alpha = {}, norm = {}, coords {}, group {} of order {}".format(a, a.norm().factor(), toV(a), Gname, G.order()))
+    #             #         #print("g = {} has Galois group {}".format(g, Gname))
+    #         else:
+    #             print("alpha = {} with min poly {}".format(a, ma))
+    #             print("g = {} has degree only {}".format(g, g.degree()))
+    #     print("Groups with multiplicities: {}".format(GG))
+
     r = len(alphas)
     if verbose:
         print("{} alphas: {}".format(len(alphas),alphas))
@@ -115,40 +136,45 @@ def linear_lift(S, f, det_char, tr, verbose=True):
     A = Matrix(GF(2),0,r)
     rA = 0
     x = polygen(F)
+    target_rank = r if V4 else r-1
     for p in Primes():
-        if p in S:
+        if p in S or p.divides(D):
             continue
         if mod_p_fact_degs(f,p)==[1,1,2]:
             continue
         P = F.prime_above(p)
+        if any([a.valuation(P)!=0 for a in alphas]):
+            continue
         FP = P.residue_field()
-        v = vector([0 if len((x**2-a).roots(FP)) else 1 for a in alphas])
+        v = vector([1-FP(a).is_square() for a in alphas])
         A1 = A.stack(v)
         rA1 = A1.rank()
         if rA1 > rA:
             A = A1
             rA = rA1
             T.append(p)
-        if rA == r:
+        if rA == target_rank:
             break
+    assert A*vector(toV(F(D))) == 0
     if verbose:
         print("Test set of primes: {}".format(T))
-        print("A-matrix =\n{}".format(A))
+        #print("A-matrix =\n{}".format(A))
+    if verbose:
         F3t = PolynomialRing(GF(3), 't')
         print("Frobenius polys: {}".format([F3t([det_char(p), -tr(p), 1]) for p in T]))
-    b = [0 if (tr(p)%3, det_char(p)%3) in [(0,2), (2,1)] else 1 for p in T]
+    b = [1 - ( (tr(p), det_char(p)) in [(0,2), (2,1)] ) for p in T]
     if verbose:
         print("Test vector: {}".format(b))
     
-    e = A**(-1)*vector(b)
+    e = list(A.solve_right(vector(b)))
+    assert A*vector(e) == vector(b)
     if verbose:
         print("exponent vector: {}".format(e))
-
-    alpha = prod([a for i,a in enumerate(alphas) if e[i]])
+    alpha = fromV(e)
     ma = alpha.minpoly()
     if verbose:
         print("alpha = {} with min poly {}".format(alpha, ma))
-
+        print("  coords {}".format(toV(alpha)))
     if V4:
         M = F.extension(x**2-alpha, 'b').absolute_field('c')
         G = M.galois_group('pari')
@@ -166,17 +192,19 @@ def linear_lift(S, f, det_char, tr, verbose=True):
         assert g.degree()==8 and g.is_irreducible()
         G = g.galois_group('pari')
     if verbose:
-        print("returning octic {} with group {}".format(g, G))
-        print("===============================")
+        print("linear_lift returns octic {} with group {}".format(g, G))
+        print("-------------------------------------------------")
     return g
 
 # Process a single form data packet:
 
 def check1form(data, verbose=False):
     assert data['ell'] == 3
+    F3 = GF(3)
     label = data['label']
-    # print("==========================================================")
-    # print("label = {}".format(label))
+    if verbose:
+        print("==========================================================")
+        print("label = {}".format(label))
     N = data['N']
     S = (3*N).prime_divisors()
     k = data['k']
@@ -189,26 +217,25 @@ def check1form(data, verbose=False):
         print("d = {}".format(d))
         print("S = {}".format(S))
 
-    def tr(p):
-        return ap[prime_pi(p)-1]
+    def tr(p): # values in GF(3)
+        return F3(ap[prime_pi(p)-1])
         
     # Step 1: compute the determinant character
 
-    T1, A, decoder = get_T1data(S)
     chilist = data['chi']
     G = DirichletGroup(N, GF(3))
-    chi = [g for g in G if all([g(a)==b for a,b in chilist])][0]
-
-    def det_char(p): # values in {+1,-1} mod 3
-        a = p**(k-1) * chi(p)
-        return a%3
     
-    def det_char_add(p): # values in {0,1} mod 2
-        return 0 if det_char(p)==1 else 1
+    # Select the char mod 3 whose values macth the data:
+    chi = next(g for g in G if all([g(a)==b for a,b in chilist]))
 
-    D = decoder([det_char_add(p) for p in T1])
+    def det_char(p): # values in GF(3)^*
+        a = F3(p)**(k-1) * chi(p)
+        return a
+
+    T1, A, decoder = get_T1data(S)
+    D = decoder([0 if det_char(p)==1 else 1 for p in T1])
     if verbose:
-        print("discriminant = {}".format(D))
+        print("discriminant = {}".format(D) + (" (cyclotomic)" if D==-3 else ""))
 
     # Since these are odd representations, the discriminant will
     # always be negative, and in particular not 1:
@@ -221,19 +248,8 @@ def check1form(data, verbose=False):
     
     quartics = get_quartics(S, D)
     if verbose:
-        print("{} candidate quartics: {}".format(len(quartics), quartics))
-    # fields = [NumberField(q,'c_') for q in quartics]
-    # t = [not any([F1.is_isomorphic(F2) for F2 in fields if F2!=F1]) for F1 in fields]
-    # if not all(t):
-    #     print([not any([F1.is_isomorphic(F2) for F2 in fields if F2!=F1]) for F1 in fields])
-    # for i,q in enumerate(quartics):
-    #     F = NumberField(q,'c_')
-    #     for j,q2 in enumerate(quartics):
-    #         if j<=i:
-    #             continue
-    #         F2= NumberField(q2,'c2_')
-    #         if F.is_isomorphic(F2):
-    #             print("isomorphic fields with quartics {} and {}".format(q,q2))
+        print("{} candidate quartics".format(len(quartics)))
+        #print(quartics)
 
     # Step 3: test irreducibility, cutting down the possible quartics
     # (possibly to none).
@@ -313,13 +329,21 @@ def check1form(data, verbose=False):
         if verbose:
             print("Irreducible: projective splitting field polynomial = {} with group {}".format(pol,gal))
         data['reducible'] = False
-        data['octic'] = octic = linear_lift(S, pol, det_char, tr, verbose=False)
+        data['octic'] = octic = linear_lift(S, pol, det_char, tr, verbose=verbose)
         longGnames = ["2S_4(8)=GL(2,3)", "D_8(8)=[4]2", "2D_8(8)=[D(4)]2"]
         shortGnames = ["GL(2,3)", "Ns", "Nn"]
         M = octic.splitting_field('c') if gal=='V4' else NumberField(octic, 'c')
         G = M.galois_group('pari')
-        data['lingal'] = Gname = shortGnames[longGnames.index(str(G).split('"')[1])]
-        assert [gal, Gname] in [['S4','GL(2,3)'], ['D4', 'Nn'], ['V4', 'Ns']]
+        Gorder = 48 if gal=='S4' else 16 if gal=='D4' else 8
+        if G.order() != Gorder:
+            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            print("! octic g = {} has Galois group of order {}, but should be {}   !".format(octic, G.order(), Gorder))
+            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            data['lingal'] = "?"
+            raise RuntimeError
+        else:
+            data['lingal'] = Gname = shortGnames[longGnames.index(str(G).split('"')[1])]
+            assert [gal, Gname] in [['S4','GL(2,3)'], ['D4', 'Nn'], ['V4', 'Ns']]
         print(display_string(data,3))
         if verbose:          
             print("----------------------------------------------------------")
@@ -375,9 +399,12 @@ def check1form(data, verbose=False):
         #raise RuntimeError
         return data
         
-def run(fname, dir=DATA_DIR, outfilename=None, verbose=False):
+def run(fname, dir=DATA_DIR, no_repeats=False, outfilename=None, verbose=False):
     alldata = read_data(fname, 3, dir=dir)
-    print("finished reading data: {} newforms".format(len(alldata)))
+    print("finished reading data: {} forms mod 3".format(len(alldata)))
+    if no_repeats:
+        alldata = [data for data in alldata if data['i']==1]
+        print(" -- only processing {} distinct forms".format(len(alldata)))
     res = [check1form(data, verbose=verbose) for data in alldata]
     res.sort(key=lambda r: [r['N'],r['k']])
     print("finished checking")
