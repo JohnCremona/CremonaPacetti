@@ -606,4 +606,4 @@ def abs_irred_extensions(K,S, D=None, check_D=True, verbose=False):
 #
 
 def irred_extensions(K,S, D=None, check_D=True, verbose=False):
-    return irred_extensions(K, S, D, check_D, verbose) + C4_extensions(K,S, D, check_D, verbose) + C2_plus_extensions(K,S, D, check_D, verbose)
+    return abs_irred_extensions(K, S, D, check_D, verbose) + C4_extensions(K,S, D, check_D, verbose) + C2_plus_extensions(K,S, D, check_D, verbose)

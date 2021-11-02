@@ -306,7 +306,7 @@ def S3_extensions(K,S, D=None, check_D=True, verbose=False):
     # h constructed is irreducible simply by testing that y=a1+b1 is
     # not in K (instead of testing that it is not 0 as in AK), and it
     # cannot be that both a1+b1 and a1+b2 are in K (if so then d=b2-b1
-    # is in K but the automorphism sigma takes b1 to b2 co cannot then
+    # is in K but the automorphism sigma takes b1 to b2 so cannot then
     # have order p, following AK's notation).
 
     def test(f):
@@ -342,12 +342,14 @@ def S3_extensions(K,S, D=None, check_D=True, verbose=False):
             print("roots of fbar: {}".format(fbar_roots))
 
         y = f_roots[0]+fbar_roots[0]
-        if y in K:
+        h = y.minpoly()
+        if h.degree()==1:
             y = f_roots[0]+fbar_roots[1]
+            h = y.minpoly()
+            assert h.degree()==3
         # these two cannot both be in K (see comment above), and when
         # not in K it has degree 3 over K so its min poly is the cubic
         # we seek.
-        h = y.minpoly()
         if verbose:
             print("f, fbar distinct.  Using y={} with minpoly {}".format(y,h))
         # h is in K[x] when S3. If h is not in K[x] then certainly C6;
