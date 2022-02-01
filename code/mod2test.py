@@ -1,6 +1,6 @@
 # Function to read one line of Drew's output
 
-from sage.all import QQ,NumberField, prime_pi
+from sage.all import QQ, prime_pi
 
 from T0T1T2 import get_T0
 from C2C3S3 import S3_extensions, C3S3_extensions
@@ -88,16 +88,16 @@ def display_string(data, ell=2):
     """
     if data['reducible']:
         return "{} mod {}:  reducible".format(data['label'], ell)
-        
+
     pol = data['pol']
-    if pol.is_irreducible():
-        L = NumberField(pol,'a')
-    else:
-        L = pol.splitting_field('a')
-    if pol.base_ring() is QQ:
-        disc = L.discriminant().factor()
-    else:
-        disc = L.relative_discriminant().factor()
+    # if pol.is_irreducible():
+    #     L = NumberField(pol,'a')
+    # else:
+    #     L = pol.splitting_field('a')
+    # if pol.base_ring() is QQ:
+    #     disc = L.discriminant().factor()
+    # else:
+    #     disc = L.relative_discriminant().factor()
     detdisc = pol.discriminant().squarefree_part()
     if detdisc%4 != 1:
         detdisc*=4

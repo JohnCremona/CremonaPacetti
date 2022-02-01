@@ -1,6 +1,8 @@
 # examples.sage: code to compute the examples in the paper "Black Box
 #  Galois Representations" by Argaez and Cremona
-
+#
+# Adapted 2022-02-01 for Sage versions >= 9.4 which have the K-Selmer group functions built-in.
+#
 #######################################################################
 #
 # Copyright 2018 John Cremona
@@ -22,7 +24,7 @@
 #######################################################################
 
 #
-# The files KSp.py, C2C3S3.py and T0T1T2.py should be available for
+# The files C2C3S3.py and T0T1T2.py should be available for
 # import (e.g. they should be in the same directory as this).  Start
 # Sage from the command line, type the command
 #
@@ -35,7 +37,6 @@ print("To run the examples, type example1() or example2() or example3() at the S
 
 from C2C3S3 import (C3_extensions, S3_extensions)
 from T0T1T2 import (get_T0, get_T2, BlackBox_from_elliptic_curve, BB_trace, BB_det, BB_t0, BB_t1, BB_t2, algo6, algo63, algo64)
-from KSp import Support
 
 # The following line means that class groups, etc, are computed
 # non-rigorously (assuming GRH) which makes everything run faster.
@@ -141,7 +142,7 @@ def example2(shortcut=True):
     K = NumberField(x^2+1,'i')
     i = K.gen()
     N = K.ideal(56+2*i)
-    S = Support(N)
+    S = N.support()
     print("K = {}".format(K))
     print("S = {}".format(S))
     C3s = C3_extensions(K,S)
@@ -207,7 +208,7 @@ def example3(shortcut=True):
     K = NumberField(x^2+1,'i')
     i = K.gen()
     N = K.ideal(10+10*i)
-    S = Support(N)
+    S = N.support()
     print("K = {}".format(K))
     print("S = {}".format(S))
     C3s = C3_extensions(K,S)

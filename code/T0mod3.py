@@ -24,7 +24,7 @@
 #  as defined in Sanna and Cremona "3-adic Black Box Galois Representations"
 #
 # Requires the files C2C3S3.py and S4.py from which the function
-# abs_irred_extensions() is imported, and that file requires KSp.py
+# abs_irred_extensions() is imported
 #
 
 from sage.all import GF, prod, polygen

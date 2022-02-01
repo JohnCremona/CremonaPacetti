@@ -8,10 +8,8 @@ always irreducible except in the case of V4.
 
 from sage.all import polygen, QQ, ZZ, PolynomialRing
 from poly_utils import pol_simplify
-from C2C3S3 import C2_extensions, C3_extensions, S3_extensions
-from KSp import is_S_unit, unramified_outside_S, pSelmerGroup, uniquify
+from C2C3S3 import C2_extensions, C3_extensions, S3_extensions, uniquify, is_S_unit, unramified_outside_S
 
-#
 ############## V4 (biquadratic extensions) ###############################
 
 r""" A V4 extension M/K has the form K(sqrt(d1),sqrt(d2),sqrt(d3)) with
@@ -237,7 +235,7 @@ def C4_extensions(K,S, D=None, check_D=True, verbose=False):
     alphas = [a for a in M.selmer_group_iterator(SM,2) if (D*a.relative_norm()).is_square()]
 
     # if some primes above 2 are not in S then a further check is required
-    if not is_S_unit(M(2),SM):
+    if not is_S_unit(M(2), SM):
         alphas = [a for a in alphas if unramified_outside_S(M.extension(xM**2-a,'t4'),SM)]
 
     if K==QQ:
@@ -331,7 +329,7 @@ def D4_extensions(K,S, d1=None, check_d1=True, verbose=False):
     SK1 = sum([K1.primes_above(P) for P in S],[])
     sigma = K1.automorphisms()[1]
 
-    K1S2, K1S2_gens, from_K1S2, to_K1S2 = pSelmerGroup(K1,SK1,ZZ(2))
+    K1S2, K1S2_gens, from_K1S2, to_K1S2 = K1.selmer_space(SK1,ZZ(2))
     # K1S2 is an abstract vector space over GF(2), from_K1S2 maps to
     # K1^* and to_K1S2 maps back, so composing a ->
     # from_K1S2(to_K1S2(a)) returns the canonical representative for
@@ -368,7 +366,7 @@ def D4_extensions(K,S, d1=None, check_d1=True, verbose=False):
     # Final check for ramification above 2.  This could also be done
     # by testing the relative extension K1(sqrt(a))/K1.
 
-    if not is_S_unit(K(2),S):
+    if not is_S_unit(K(2), S):
         quartics = [q for q in quartics if unramified_outside_S(K.extension(q,'t4'),S, 2)]
         if verbose:
             print("After final test at 2 we have {} D4 quartics".format(len(quartics)))
@@ -464,10 +462,10 @@ def A4S4_extensions(K,S, M=None, D=None, check_M=True, check_D=True, verbose=Fal
     name = "S4" if len(autos)==1 else "A4"
     SM = sum([M.primes_above(P) for P in S],[])
 
-    KS2, KS2_gens, from_KS2, to_KS2 = pSelmerGroup(K,S,ZZ(2))
+    KS2, KS2_gens, from_KS2, to_KS2 = K.selmer_space(S,ZZ(2))
     #print("gens of KS2: {}".format(KS2_gens))
 
-    MS2, MS2_gens, from_MS2, to_MS2 = pSelmerGroup(M,SM,ZZ(2))
+    MS2, MS2_gens, from_MS2, to_MS2 = M.selmer_space(SM,ZZ(2))
     #print("gens of MS2: {}".format(MS2_gens))
     #print("with norms : {}".format([b.norm() for b in MS2_gens]))
 
@@ -531,7 +529,7 @@ def A4S4_extensions(K,S, M=None, D=None, check_M=True, check_D=True, verbose=Fal
     # The second V4 layer may be ramified at primes above 2 not in S.
     # So we do a final check (unless S contains all P|2):
 
-    if not is_S_unit(K(2),S):
+    if not is_S_unit(K(2), S):
         quartics = [q for q in quartics if unramified_outside_S(K.extension(q,'t4'),S, 2)]
         if verbose:
             print("After final test at 2 we have {} {} quartics".format(len(quartics), name))

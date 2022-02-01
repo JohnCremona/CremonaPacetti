@@ -1,5 +1,4 @@
 from sage.all import polygen, ZZ, GF, binomial, Matrix, prod, vector, Set
-from KSp import pSelmerGroup
 from S4 import A4S4_extensions
 from T0T1T2 import lam, primes_iter, residue_field
 
@@ -54,7 +53,7 @@ def S3primes(K, S, f, verbose=False):
 
     if verbose:
         print("finding first set of primes")
-    KS2, KS2_gens, from_KS2, to_KS2 = pSelmerGroup(K,S,ZZ(2))
+    KS2, KS2_gens, from_KS2, to_KS2 = K.selmer_space(S,ZZ(2))
     D = f.discriminant()
     quo = KS2 / KS2.subspace([to_KS2(D)])
     alphas = [from_KS2(quo.lift(w)) for w in quo if w]

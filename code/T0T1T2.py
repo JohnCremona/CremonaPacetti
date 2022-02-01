@@ -23,11 +23,12 @@
 # This file contains SageMath code to compute the sets T0, T1 and T2
 #  as defined in Argaez and Cremona "Black Box Galois Representations"
 #
-# Requires the file C2C3S3.py from which the function
-# C3S3_extensions() is imported, and that file requires KSp.py
+# Requires the file C2C3S3.py from which the function C3S3_extensions() is imported
 #
 
 from sage.all import GF, Primes, QQ, prod, polygen, ZZ, vector, Set, Matrix
+from sage.rings.number_field.selmer_group import _ideal_generator as IdealGenerator
+from C2C3S3 import C3S3_extensions
 
 # Return the residue field at p uniformly for p a prime number or a
 # prime ideal
@@ -120,7 +121,6 @@ def get_p_2(K,f,g,N, la=lam):
 def get_T0(K,S, flist=None, verbose=False):
    # Compute all cubics unramified outside S if not supplied:
    if flist == None:
-      from C2C3S3 import C3S3_extensions
       flist = C3S3_extensions(K,S)
    if verbose:
       print("cubics: {}".format(flist))
@@ -210,7 +210,6 @@ def alphalist(p, Dlist):
 def get_T1(K, S, unit_first=True, verbose=False):
 # Sx is a list of generators of K(S,2) with the unit first or last, assuming h(K)=1
    u = -1 if K==QQ else  K(K.unit_group().torsion_generator())
-   from KSp import IdealGenerator
    Sx = [IdealGenerator(P) for P in S]
    if unit_first:
       Sx = [u] + Sx
@@ -268,7 +267,6 @@ def get_T1(K, S, unit_first=True, verbose=False):
 
 def get_T2(K, S, unit_first=True, verbose=False):
    u = -1 if K==QQ else  K(K.unit_group().torsion_generator())
-   from KSp import IdealGenerator
    Sx = [IdealGenerator(P) for P in S]
    if unit_first:
       Sx = [u] + Sx
@@ -392,7 +390,6 @@ def algo6(K,S,BB, T2=None, unit_first = True, verbose=False):
          print("T2 = {}".format(T2))
    assert len(T2)==r*(r+1)//2
 
-   from KSp import IdealGenerator
    Sx = [IdealGenerator(P) for P in S]
    u = -1 if K==QQ else  K(K.unit_group().torsion_generator())
    Sx = [u] + Sx if unit_first else Sx+[u]
@@ -435,7 +432,6 @@ def algo63(K, S, BB, T2=None, unit_first = True, verbose=False):
          print("T2 = {}".format(T2))
    assert len(T2)==r*(r+1)//2
 
-   from KSp import IdealGenerator
    Sx = [IdealGenerator(P) for P in S]
    u = -1 if K==QQ else  K(K.unit_group().torsion_generator())
    Sx = [u] + Sx if unit_first else Sx+[u]
@@ -512,7 +508,6 @@ def algo64(K, S, BB, T2=None, unit_first = True, verbose=False):
          print("T2 = {}".format(T2))
    assert len(T2)==r*(r+1)//2
 
-   from KSp import IdealGenerator
    Sx = [IdealGenerator(P) for P in S]
    u = -1 if K==QQ else  K(K.unit_group().torsion_generator())
    Sx = [u] + Sx if unit_first else Sx+[u]

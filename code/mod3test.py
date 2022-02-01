@@ -6,11 +6,9 @@ assert display_string # for pyflakes, since not used in this file
 assert display_all    # for pyflakes, since not used in this file
 
 from poly_utils import pol_simplify
-from KSp import pSelmerGroup
 from T0T1T2 import get_T1
 from T0mod3 import get_T0_mod3, mod_p_fact_degs
 from S4 import D4_extensions, S4_extensions, V4_extensions
-#assert S4_extensions_with_quadratic
 
 try:
     assert len(quartic_lists)
@@ -97,7 +95,7 @@ def linear_lift(S, f, det_char, tr, verbose=True):
     F =  f.splitting_field('a') if V4 else NumberField(f, 'a')
     assert V4 or not F(D).is_square()
     SF = sum([F.primes_above(p) for p in S], [])
-    V, alphas, fromV, toV = pSelmerGroup(F, SF, ZZ(2))
+    V, alphas, fromV, toV = F.selmer_space(SF, ZZ(2))
 
     # if not V4:
     #     GG = {}
