@@ -81,10 +81,13 @@ def is_S_unit(a, S):
     if K in [ZZ,QQ]:
         return QQ(a).is_S_unit(S)
     # fractional ideals also have such a method:
+    #print("Checking whether {} in {} is an S-unit with S={}...".format(a,K,S))
     try:
-        return a.is_S_unit(S)
+        ok = a.is_S_unit(S)
     except AttributeError:
-        return K.ideal(a).is_S_unit(S)
+        ok = K.ideal(a).is_S_unit(S)
+    #print("... {}".format(ok))
+    return ok
 
 def unramified_outside_S(L,S, p=None, debug=False):
     r"""Test whether ``L`` is unramified over its base outside ``S``.
@@ -233,7 +236,6 @@ def C3_extensions(K,S, verbose=False, debug=False):
     - ``S`` (list) -- a list of prime ideals in ``K``, or primes.
 
     - ``verbose`` (boolean, default ``False``) -- verbosity flag.
-    OUTPUT:
 
     - ``debug`` (boolean, default ``False``) -- debugging flag.
     OUTPUT:
@@ -314,6 +316,8 @@ def C3_extensions(K,S, verbose=False, debug=False):
     # would already be the desired list.
 
     check_3 = not is_S_unit(K(3),S)
+    if check_3 and verbose:
+        print("3 is not an S-unit, so we will need to check ramification at primes above 3 not in S")
     if debug or check_3:
         fields = [K.extension(f,'t3') for f in polys]
         if verbose: print("computed fields, checking ramification")
@@ -350,7 +354,13 @@ def C3_extensions(K,S, verbose=False, debug=False):
             print("Problem: relative discriminants are {}".format([L.relative_discriminant().factor() for L in fields]))
         else:
             if verbose: print("computed unramified polys OK")
-    return [pol_simplify(f) for f in polys]
+    if verbose:
+        print("{} polys found".format(len(polys)))
+    if K.absolute_degree()<6:
+        if verbose:
+            print("-- applying pol_simplify...")
+        polys = [pol_simplify(f) for f in polys]
+    return polys
 
 ############## S3 (non-cyclic cubic extensions) ###############################
 
@@ -395,7 +405,16 @@ def S3_extensions(K,S, D=None, check_D=True, verbose=False):
         Ds = [f.discriminant() for f in C2_extensions(K,S)]
         if K is QQ:
             Ds = [d.squarefree_part() for d in Ds]
-        return sum([S3_extensions(K,S, d, verbose) for d in Ds], [])
+        if verbose:
+            print("{} possible quadratic subfields".format(len(Ds)))
+        cubics = []
+        for d in Ds:
+            print("working on d={}".format(d))
+            cubics1 = S3_extensions(K,S, d, False, verbose)
+            if verbose:
+                print("d={}: {} cubics found: {}".format(d,len(cubics1),cubics1))
+            cubics = cubics+cubics1
+        return cubics
 
     D = K(D)
     M = K.extension(Kx([-D,0,1]), 't1')
@@ -537,9 +556,15 @@ def S3_extensions(K,S, D=None, check_D=True, verbose=False):
     if verbose:
         print("polys  (after final test, before simplification): {}".format(polys))
 
-    polys = [pol_simplify(f) for f in polys]
-    if verbose:
-        print("polys  (after final test, after simplification): {}".format(polys))
+    if K.absolute_degree()<6:
+        if verbose:
+            print("-- applying pol_simplify...")
+        polys = [pol_simplify(f) for f in polys]
+        if verbose:
+            print("polys  (after simplification): {}".format(polys))
+    else:
+        if verbose:
+            print("skipping simplification step as base field has absolute degree>6")
     return polys
 
 ############## C3 & S3 extensions ###############################
