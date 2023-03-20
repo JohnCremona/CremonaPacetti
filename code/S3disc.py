@@ -33,6 +33,8 @@ def get_disc(K, S, BB, verbose=False):
     V = [] # test vector
 
     for P, aP in BB.items():
+        if P in S:
+            continue
         aP = BB[P]
         nP = P if K is QQ else P.norm()
         v = 0 if aP%2==1 else 1 if (aP+nP-1)%4==0 else -1
