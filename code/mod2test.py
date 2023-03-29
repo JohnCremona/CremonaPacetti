@@ -120,29 +120,44 @@ def display_all(datalist, ell=2, fname=None):
         for data in datalist:
             print(display_string(data, ell))
     
-def run(fname, dir=DATA_DIR, outfilename=None, verbose=False):
-    alldata = read_data(fname, 2, dir=dir)
+def run(fname, dir=DATA_DIR, no_repeats=False, outfilename=None, verbose=False):
+    ell = 2
+    alldata = read_data(fname, ell, dir=dir)
     print("finished reading data: {} newforms".format(len(alldata)))
-    res = [check1form(data, verbose=verbose) for data in alldata]
-    res.sort(key=lambda r: [r['N'],r['k']])
-    print("finished checking")
-    #print(res)
-    reds = [r for r in res if r['reducible']]
-    nreds = len(reds)
-    irreds = [r for r in res if not r['reducible']]
-    nirreds = len(irreds)
-    print("{} forms are reducible and {} are irreducible".format(nreds,nirreds))
-    C3s = [r for r in irreds if r['gal']=='C3']
-    S3s = [r for r in irreds if r['gal']=='S3']
-    if C3s:
-        print("{} forms are irreducible with splitting field C3".format(len(C3s)))
-        # for r in C3s:
-        #     display(r)
-    if S3s:
-        print("{} forms are irreducible with splitting field S3".format(len(S3s)))
-        # for r in S3s:
-        #     display(r)
+    if no_repeats:
+        alldata = [data for data in alldata if data['i']==1]
+        print(" -- only processing {} distinct forms".format(len(alldata)))
+    nreds = 0   # count of reducibles
+    nirreds = 0 # count of irreducibles
+    gal_counts = {'S3':0, 'C3':0}   # counts of irreducibles with projective image S3, C3
+    nC3s = 0    # count of irreducibles with C3 image
+    nS3s = 0    # count of irreducibles with S3 image
+
     if outfilename:
-        display_all(res, 2, outfilename)
-        print("{} lines written to {}".format(len(res), outfilename))
-    return res
+        with open(outfilename, 'a') as outfile:
+            for data in alldata:
+                res1 = check1form(data, verbose=verbose)
+                outfile.write(display_string(res1, ell)+"\n")
+
+                if res1['reducible']:
+                    nreds += 1
+                else:
+                    nirreds += 1
+                    gal_counts[res1['gal']] +=1
+    else:
+        for data in alldata:
+            res1 = check1form(data, verbose=verbose)
+            print(display_string(res1, ell))
+
+            if res1['reducible']:
+                nreds += 1
+            else:
+                nirreds += 1
+                gal_counts[res1['gal']] +=1
+
+    print("{} lines written to {}".format(nreds+nirreds, outfilename))
+    print()
+    print("{} forms are reducible and {} are irreducible".format(nreds,nirreds))
+    for gal in gal_counts:
+        print("{} forms are irreducible with splitting field {}".format(gal_counts[gal], gal))
+
