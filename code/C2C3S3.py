@@ -409,7 +409,7 @@ def S3_extensions(K,S, D=None, check_D=True, verbose=False):
             print("{} possible quadratic subfields".format(len(Ds)))
         cubics = []
         for d in Ds:
-            print("working on d={}".format(d))
+            #print("working on d={}".format(d))
             cubics1 = S3_extensions(K,S, d, False, verbose)
             if verbose:
                 print("d={}: {} cubics found: {}".format(d,len(cubics1),cubics1))
