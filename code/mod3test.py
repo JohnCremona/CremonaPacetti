@@ -175,9 +175,10 @@ def linear_lift(S, f, det_char, tr, verbose=True):
         print("  coords {}".format(toV(alpha)))
     if V4:
         M = F.extension(x**2-alpha, 'b').absolute_field('c')
-        G = M.galois_group('pari')
+        G = M.galois_group()
+        G_label = G.pari_label()
         if verbose:
-            print("V4 case. M={} with Galois group {}".format(M, G))
+            print("V4 case. M={} with Galois group {}".format(M, G_label))
         LL = [L for L,i,j in M.subfields() if L.degree()==4 and not L.is_galois()]
         assert len(LL)==4
         # This contains two isomorphic copies of each of the sibling quartics
@@ -188,9 +189,10 @@ def linear_lift(S, f, det_char, tr, verbose=True):
         x = polygen(QQ)
         g = pol_simplify(ma(x**2), use_polredabs=True)
         assert g.degree()==8 and g.is_irreducible()
-        G = g.galois_group('pari')
+        G = g.galois_group(pari_group=True)
+        G_label = G.label()
     if verbose:
-        print("linear_lift returns octic {} with group {}".format(g, G))
+        print("linear_lift returns octic {} with group {}".format(g, G_label))
         print("-------------------------------------------------")
     return g
 
@@ -331,8 +333,9 @@ def check1form(data, verbose=False):
         longGnames = ["2S_4(8)=GL(2,3)", "D_8(8)=[4]2", "2D_8(8)=[D(4)]2"]
         shortGnames = ["GL(2,3)", "Ns", "Nn"]
         M = octic.splitting_field('c') if gal=='V4' else NumberField(octic, 'c')
-        G = M.galois_group('pari')
+        G = M.galois_group()
         Gorder = 48 if gal=='S4' else 16 if gal=='D4' else 8
+        G_label = G.pari_label()
         if G.order() != Gorder:
             print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
             print("! octic g = {} has Galois group of order {}, but should be {}   !".format(octic, G.order(), Gorder))
@@ -340,7 +343,7 @@ def check1form(data, verbose=False):
             data['lingal'] = "?"
             raise RuntimeError
         else:
-            data['lingal'] = Gname = shortGnames[longGnames.index(str(G).split('"')[1])]
+            data['lingal'] = Gname = shortGnames[longGnames.index(G_label)]
             assert [gal, Gname] in [['S4','GL(2,3)'], ['D4', 'Nn'], ['V4', 'Ns']]
         print(display_string(data,3))
         if verbose:          
@@ -380,8 +383,9 @@ def check1form(data, verbose=False):
         longGnames = ["2S_4(8)=GL(2,3)", "D_8(8)=[4]2", "2D_8(8)=[D(4)]2"]
         shortGnames = ["GL(2,3)", "Ns", "Nn"]
         M = octic.splitting_field('c') if gal=='V4' else NumberField(octic, 'c')
-        G = M.galois_group('pari')
-        data['lingal'] = Gname = shortGnames[longGnames.index(str(G).split('"')[1])]
+        G = M.galois_group()
+        G_label = G.pari_label()
+        data['lingal'] = Gname = shortGnames[longGnames.index(G_label)]
         assert [gal, Gname] in [['S4','GL(2,3)'], ['D4', 'Nn'], ['V4', 'Ns']]
         print(display_string(data,3))
         if verbose:
@@ -398,34 +402,43 @@ def check1form(data, verbose=False):
         return data
         
 def run(fname, dir=DATA_DIR, no_repeats=False, outfilename=None, verbose=False):
-    alldata = read_data(fname, 3, dir=dir)
+    ell = 3
+    alldata = read_data(fname, ell, dir=dir)
     print("finished reading data: {} forms mod 3".format(len(alldata)))
     if no_repeats:
         alldata = [data for data in alldata if data['i']==1]
         print(" -- only processing {} distinct forms".format(len(alldata)))
-    res = [check1form(data, verbose=verbose) for data in alldata]
-    res.sort(key=lambda r: [r['N'],r['k']])
-    print("finished checking")
-    reds = [r for r in res if r['reducible']]
-    nreds = len(reds)
-    irreds = [r for r in res if not r['reducible']]
-    nirreds = len(irreds)
-    print("{} forms are reducible and {} are irreducible".format(nreds,nirreds))
-    S4s = [r for r in irreds if r['gal']=='S4']
-    nS4 = len(S4s)
-    print("{} forms are irreducible and surjective (projective splitting field S4)".format(nS4))
-    D4s = [r for r in irreds if r['gal']=='D4']
-    nD4 = len(D4s)
-    print("{} forms are irreducible with image Nn, the normaliser of a Nonsplit Cartan (projective splitting field D4)".format(nD4))
-    V4s = [r for r in irreds if r['gal']=='V4']
-    nV4 = len(V4s)
-    print("{} forms are irreducible with image Ns, the normaliser of a Split Cartan (projective splitting field V4)".format(nV4))
+    nreds = 0   # count of reducibles
+    nirreds = 0 # count of irreducibles
+    gal_counts = {'S4':0, 'D4':0, 'V4':0}   # counts of irreducibles with projective image S4, D4, V4
+    gal_strings = {'S4': ' and surjective (projective splitting field S4)',
+                   'D4': ' with image Nn, the normaliser of a Nonsplit Cartan (projective splitting field D4)',
+                   'V4': ' with image Ns, the normaliser of a Split Cartan (projective splitting field V4'}
 
-    unknowns = [r for r in irreds if not r['gal']]
-    nunks = len(unknowns)
-    if nunks:
-        print("{} forms are irreducible but we found no splitting field".format(nunks))
     if outfilename:
-        display_all(res, 3, outfilename)
-        print("{} lines written to {}".format(len(res), outfilename))
-    return res
+        with open(outfilename, 'a') as outfile:
+            for data in alldata:
+                res1 = check1form(data, verbose=verbose)
+                outfile.write(display_string(res1, ell)+"\n")
+
+                if res1['reducible']:
+                    nreds += 1
+                else:
+                    nirreds += 1
+                    gal_counts[res1['gal']] +=1
+    else:
+        for data in alldata:
+            res1 = check1form(data, verbose=verbose)
+            print(display_string(res1, ell))
+
+            if res1['reducible']:
+                nreds += 1
+            else:
+                nirreds += 1
+                gal_counts[res1['gal']] +=1
+
+    print("{} lines written to {}".format(nreds+2*nirreds, outfilename))
+    print()
+    print("{} forms are reducible and {} are irreducible".format(nreds,nirreds))
+    for gal in gal_counts:
+        print("{} forms are irreducible{}".format(gal_counts[gal], gal_strings[gal]))
