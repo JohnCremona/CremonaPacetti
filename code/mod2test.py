@@ -1,6 +1,6 @@
 # Function to read one line of Drew's output
 
-from sage.all import QQ, prime_pi
+from sage.all import QQ, prime_pi, primes_first_n
 
 from T0T1T2 import get_T0
 from C2C3S3 import S3_extensions, C3_extensions, C2_extensions
@@ -221,8 +221,6 @@ def run(fname, dir=DATA_DIR, no_repeats=False, outfilename=None, concise=True, v
     nreds = 0   # count of reducibles
     nirreds = 0 # count of irreducibles
     gal_counts = {'S3':0, 'C3':0}   # counts of irreducibles with projective image S3, C3
-    nC3s = 0    # count of irreducibles with C3 image
-    nS3s = 0    # count of irreducibles with S3 image
 
     if outfilename:
         with open(outfilename, 'a') as outfile:
