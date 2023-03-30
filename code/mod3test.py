@@ -184,7 +184,7 @@ def linear_lift(S, f, det_char, tr, verbose=True):
         # This contains two isomorphic copies of each of the sibling quartics
         # So we pick one with each discriminant (which must be different)
         DL = Set([L.disc() for L in LL])
-        g = prod([next(L.defining_polynomial() for L in LL if L.disc()==d) for d in DL])
+        g = prod([next(pol_simplify(L.defining_polynomial(), use_polredabs=True) for L in LL if L.disc()==d) for d in DL])
     else:
         x = polygen(QQ)
         g = pol_simplify(ma(x**2), use_polredabs=True)
@@ -304,7 +304,7 @@ def check1form(data, verbose=False):
         print("After testing all p<{}, {} possible quartics remain".format(maxp,len(quartics2)))
         
     if not quartics2:
-        # If we get here, out list of quartics cannot have been complete
+        # If we get here, our list of quartics cannot have been complete
         data['pol'] = None
         data['gal'] = None
         data['reducible'] = None
@@ -319,12 +319,14 @@ def check1form(data, verbose=False):
     # irreducible with this kernel polynomial:
     
     if len(quartics2)==1:
-        data['pol'] = pol = quartics2[0]
+        pol = quartics2[0]
         if pol.is_irreducible():
+            pol = pol_simplify(pol, use_polredabs=True)
             id = pol.galois_group().id()
             data['gal'] = gal = 'S4' if id==[24,12] else 'D4'
         else:
             data['gal'] = gal = 'V4'
+        data['pol'] = pol
         
         if verbose:
             print("Irreducible: projective splitting field polynomial = {} with group {}".format(pol,gal))
@@ -370,12 +372,14 @@ def check1form(data, verbose=False):
     # NB the vectors in vlist are distinct by construction, and v should equal exactly one of them:
     if v in vlist:
         i = vlist.index(v)
-        data['pol'] = pol = quartics2[i]
+        pol = quartics2[i]
         if pol.is_irreducible():
+            pol = pol_simplify(pol, use_polredabs=True)
             id = pol.galois_group().id()
             data['gal'] = gal = 'S4' if id==[24,12] else 'D4'
         else:
             data['gal'] = gal = 'V4'
+        data['pol'] = pol
         if verbose:
             print("Irreducible: splitting field polynomial = {} with group {}".format(pol,gal))
         data['reducible'] = False

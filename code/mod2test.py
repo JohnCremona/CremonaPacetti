@@ -4,6 +4,7 @@ from sage.all import QQ, prime_pi, primes_first_n
 
 from T0T1T2 import get_T0
 from C2C3S3 import S3_extensions, C3_extensions, C2_extensions
+from poly_utils import polredabs
 from S3disc import get_disc
 from read_modell_data import read_data, DATA_DIR
 
@@ -35,10 +36,12 @@ def get_cubics(S, D=None):
     SS = tuple(S)
     if D:
         if (SS,D) in cubic_lists:
-            CC = cubic_lists[(SS,D)]
+            return cubic_lists[(SS,D)]
         else:
-            cubic_lists[(SS,D)] = CC = C3_extensions(QQ,SS) if D.is_square() else S3_extensions(QQ,SS,D)
-        return CC
+            CC = C3_extensions(QQ,SS) if D.is_square() else S3_extensions(QQ,SS,D)
+            CC = [polredabs(pol) for pol in CC]
+            cubic_lists[(SS,D)] = CC
+            return CC
     else:
         return sum((get_cubics(S,D1) for D1 in (f.discriminant().squarefree_part() for f in C2_extensions(QQ,S))), [])
 
@@ -188,6 +191,7 @@ def display_string(data, ell=2, concise=True):
             line = f"{data['label']}:{data['gal']}:{pol}"
         else:
             line = f"{data['label']}:{data['lingal']}:{data['octic'].factor()}:{data['gal']}:{pol.factor()}"
+        line = line.replace(" ", "")
     else:
         detdisc = pol.discriminant().squarefree_part()
         if detdisc%4 != 1:
