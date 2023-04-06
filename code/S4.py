@@ -413,8 +413,12 @@ def A4S4_extensions(K,S, M=None, D=None, check_M=True, check_D=True, verbose=Fal
     Kx = PolynomialRing(K, 'x')
     x = Kx.gen()
     if verbose:
-        print("finding A4/S4 extensions of {} unramified outside {}".format(K,S))
-
+        mess=f"finding A4/S4 extensions of {K} unramified outside {S}"
+        if D:
+            mess += f" with discriminant {D}"
+        if M:
+            mess += f" with cubic resolvent {M.defining_polynomial()}"
+        print(mess)
     if not M:
         if D:
             if check_D:
@@ -560,7 +564,12 @@ def S4_extensions(K,S, M=None, check_M=True, D=None, check_D=True, verbose=False
     Just call A4S4_extensions() but if M=D=None, omit D=1
     """
     if verbose:
-        print("finding S4 extensions of {} unramified outside {}".format(K,S))
+        mess=f"finding S4 extensions of {K} unramified outside {S}"
+        if D:
+            mess += f" with discriminant {D}"
+        if M:
+            mess += f" with cubic resolvent {M.defining_polynomial()}"
+        print(mess)
 
     if M or D:
         return A4S4_extensions(K,S, M=M, check_M=check_M, D=D, check_D=check_D, verbose=verbose)
