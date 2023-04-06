@@ -1,7 +1,7 @@
 from sage.all import ZZ, QQ, GF, DirichletGroup, prime_pi, Primes, primes, Set, NumberField, Matrix, vector, polygen, prod, PolynomialRing
 
 from read_modell_data import read_data, DATA_DIR
-from mod2test import display_string, display_all
+from mod2test import display_string, display_all, get_cubics
 assert display_string # for pyflakes, since not used in this file
 assert display_all    # for pyflakes, since not used in this file
 
@@ -15,12 +15,19 @@ try:
 except:
     quartic_lists = {}
 
-def S4D4V4_extensions(S, D, verbose=False):
+def S4D4V4_extensions(S, D, cubics, verbose=True):
     # NB we know that D<0 so (a) nontrivial and (b) C4 impossible
-    S4s = S4_extensions(QQ,S, D=D, check_D=False)
-    assert all([f.discriminant().squarefree_part()==D for f in S4s])
+    S4s = sum([S4_extensions(QQ,S, M=NumberField(cubic, 'm'), D=D, check_M=False, check_D=False)
+               for cubic in cubics], [])
+    # S4s = []
+    # for cubic in cubics:
+    #     S4sc = S4_extensions(QQ,S, M=NumberField(cubic, 'm'), D=D, check_M=False, check_D=False)
+    #     S4sc = [pol_simplify(c, use_polredabs=True) for c in S4sc]
+    #     S4s += S4sc
+    #     if verbose:
+    #         print(f"S={S}, D={D}, cubic={cubic}: {len(S4sc)} S4 quartics: {S4sc}")
     if verbose:
-        print("S={}, D={}: {} S4 quartics".format(S,D,len(S4s)))
+        print(f"S={S}, D={D}, cubics={cubics}: {len(S4s)} S4 quartics:")
         print(S4s)
 
     D4s = D4_extensions(QQ,S, d1=D, check_d1=False)
@@ -39,12 +46,17 @@ def S4D4V4_extensions(S, D, verbose=False):
 
     return S4s + D4s + V4s
 
-def get_quartics(S, D=None):
+def get_quartics(S, D, cubics):
+    """Return from the cacahe or compute a list of S4,D4 or V4 quartics
+    unramified outside S, with discriminant D and (for S4s) with cubic
+    resolvent in the list cubics.
+    """
     global quartic_lists
     SS = tuple(S)
-    if not (SS,D) in quartic_lists:
-        quartic_lists[(SS,D)] = S4D4V4_extensions(S, D)
-    return quartic_lists[(SS,D)]
+    CC = tuple(cubics)
+    if not (SS,D,CC) in quartic_lists:
+        quartic_lists[(SS,D,CC)] = S4D4V4_extensions(S, D, cubics)
+    return quartic_lists[(SS,D,CC)]
 
 try:
     assert len(T1data)
@@ -198,6 +210,67 @@ def linear_lift(S, f, det_char, tr, verbose=True):
 
 # Process a single form data packet:
 
+def get_disc(data):
+    G = DirichletGroup(data['N'], GF(3))
+    # Select the char mod 3 whose values match the data:
+    chi = next(g for g in G if all([g(a)==b for a,b in data['chi_list']]))
+    data['chi'] = chi
+    F3 = GF(3)
+    k = data['k']
+    det_char = lambda p: F3(p)**(k-1) * chi(p)
+    data['det_char'] = det_char
+    T1, A, decoder = get_T1data(data['S'])
+    data['disc'] = D = decoder([0 if det_char(p)==1 else 1 for p in T1])
+    return D
+
+def get_possible_cubics(data, verbose=True):
+    r"""Given data with discriminant already computed, return a list of possible resolvent cubics.
+
+    Starting with all cubics with discriminant D, we can eliminate
+    those which are irreducible modulo any prime with
+    char.poly. x^2+1.  Such primes exist if and only if the
+    representation is irreducible.  In this case we expect there to be
+    enough data to eliminate all but one cubic, but we do not rely on
+    this.  The fewer cubics we have after this stage, the fewer
+    quartic lists we will have to compute and test later.
+
+    Returns (boolean,list). The boolean is True iff we have
+    established irreducibility; when False we expect reducibility but
+    have not proved it.  The list is a (possibly empty) list of
+    possible cubic resolvent polynomials.  These will be used to
+    restrict the possible S4 extensions considered next.
+
+    """
+    S = data['S']
+    D = data['disc']
+    tr = data['tr']
+    det3 = data['det_char']
+
+    cubics = get_cubics(S, D)
+    ncubics = len(cubics)
+    if verbose:
+        print(f"{ncubics} cubics have discriminant {D} modulo squares: {cubics}")
+
+    # Find "irreducibility witness primes" with char poly x^2+1:
+    useful_primes = [p for p in primes_first_n(data['nap']) if p not in S and det3(p)==+1 and tr(p)==0]
+    irred = len(useful_primes)>0
+    if not irred:
+        if verbose:
+            print("Probably reducible: no irreducibility witness primes")
+        return False, cubics
+
+    print(f"Irreducible: {len(useful_primes)} witness primes: {useful_primes}")
+
+    test = lambda cub,p: mod_p_fact_degs(cub,p) == [1,1,1] or p.divides(cub.discriminant())
+    # for cub in cubics:
+    #     print(f"Testing cubic {cub}")
+    #     for p in useful_primes:
+    #         print(f" mod {p} factors as {mod_p_fact_degs(cub,p)}")
+    cubics = [cub for cub in cubics if all(test(cub,p) for p in useful_primes)]
+    ncubics = len(cubics)
+    print(f"After testing for irreducibility modulo all witness primes, {ncubics} remain: {cubics}")
+    return True, cubics
+
 def check1form(data, verbose=False):
     assert data['ell'] == 3
     F3 = GF(3)
@@ -206,7 +279,7 @@ def check1form(data, verbose=False):
         print("==========================================================")
         print("label = {}".format(label))
     N = data['N']
-    S = (3*N).prime_divisors()
+    S = data['S']
     k = data['k']
     d = data['d']
     ap = data['ap']
@@ -217,64 +290,66 @@ def check1form(data, verbose=False):
         print("d = {}".format(d))
         print("S = {}".format(S))
 
-    def tr(p): # values in GF(3)
-        return F3(ap[prime_pi(p)-1])
-        
+    data['tr'] = tr = lambda p: F3(ap[prime_pi(p)-1])
+    data['atr'] = atr = lambda p: int(tr(p)!=0)
+
     # Step 1: compute the determinant character
 
-    chilist = data['chi']
-    G = DirichletGroup(N, GF(3))
-    
-    # Select the char mod 3 whose values macth the data:
-    chi = next(g for g in G if all([g(a)==b for a,b in chilist]))
-
-    def det_char(p): # values in GF(3)^*
-        a = F3(p)**(k-1) * chi(p)
-        return a
-
-    T1, A, decoder = get_T1data(S)
-    D = decoder([0 if det_char(p)==1 else 1 for p in T1])
+    D = get_disc(data) # sets data['disc']
     if verbose:
-        print("discriminant = {}".format(D) + (" (cyclotomic)" if D==-3 else ""))
+        print(f"character = {data['chi']}")
+        print(f"discriminant = {D}" + (" (cyclotomic)" if D==-3 else ""))
+        det_char = data['det_char']
 
     # Since these are odd representations, the discriminant will
     # always be negative, and in particular not 1:
     assert D<0
     
-    # Step 2: find all possible quartics
+    # Step 2: compute the cubic resolvent:
 
-    # Since D<0 we seek extensions of Q which are S4 or D4 or V4 and with
-    # discriminant field Q(sqrt(D))
-    
-    quartics = get_quartics(S, D)
+    irred, cubics = get_possible_cubics(data, verbose)
+    # NB irred==True means certainly irreducible (we found primes
+    # with char.poly. x^2+1) but irred==False only means we found no
+    # such prime, so the representation is probably reducible but we
+    # will establish that rigorously.
     if verbose:
-        print("{} candidate quartics".format(len(quartics)))
-        #print(quartics)
+        if irred:
+            print(f"Irreducible, possible cubic resolvents {cubics}")
+        else:
+            print(f"Probably reducible, possible cubic resolvents {cubics}")
 
-    # Step 3: test irreducibility, cutting down the possible quartics
-    # (possibly to none).
-
-    quartics2 = []
-    irred = False
-    for f in quartics:
-        p =  next(p for p in Primes() if (not p in S) and mod_p_fact_degs(f,p)==[2,2])
-        if det_char(p)==1 and tr(p)==0:
-            quartics2.append(f)
-            if verbose and not irred:
-                print("Irreducible via p={}".format(p))
-            irred = True
-        # else:
-        #     if verbose:
-        #         print("Discarding {} using p={}".format(f,p))
-
-    # If all quartics have been eliminated, the representation is reducible:
-    
     if not irred:
         print("{} mod {}: Reducible".format(label, 3))
         data['reducible'] = True
         return data
 
-    # Now we try to eliminate more remaining quartics by matching
+    # Step 3: find all possible quartics
+    
+    quartics = get_quartics(S, D, cubics)
+    if verbose:
+        print("{} candidate quartics".format(len(quartics)))
+
+    # Step 4: test irreducibility, cutting down the possible quartics
+    # (possibly to none).
+
+    # quartics2 = []
+    # for f in quartics:
+    #     p =  next(p for p in Primes() if (not p in S) and mod_p_fact_degs(f,p)==[2,2])
+    #     if det_char(p)==1 and tr(p)==0:
+    #         quartics2.append(f)
+    #         if verbose and not irred:
+    #             print("Irreducible via p={}".format(p))
+    #         irred = True
+    # quartics = quartics2
+
+    # # If all quartics have been eliminated, the representation is reducible:
+    
+    # if not irred:
+    #     print("{} mod {}: Reducible".format(label, 3))
+    #     data['reducible'] = True
+    #     return data
+
+    # Step 4: eliminate quartics by matching
     # factorization patterns to Frobenius polynomials:
     #
     # [4]:                |ap|=1, chi=-1
@@ -286,40 +361,36 @@ def check1form(data, verbose=False):
                  (1, 1): [[1,3],[1,1,1,1]],
                  (0, 2): [[1,1,2]],
                  (0, 1): [[2,2]]}
-                 
-    maxp = 100
-    Sx = Set(sum([f.discriminant().support() for f in quartics2], S))
-    #print("Not using primes in {}".format(Sx))
-    for p in primes(maxp):
-        if p==2 or p in Sx:
-            continue
-        (t, d) = (int(tr(p)!=0), det_char(p))
-        # for f in quartics2:
-        #     print("p={}, f={}, [f modp]={}, (t,d)={} -> {}".format(p,f,mod_p_fact_degs(f,p),(t,d), fact_pats[(t,d)]))
-        quartics2 = [f for f in quartics2 if mod_p_fact_degs(f,p) in fact_pats[(t,d)]]
-        # if verbose:
-        #     print("After checking p={}, {} possible quartics remain".format(p,len(quartics2)))
-        if not quartics2: break
+    poss_fact_pat = lambda p: fact_pats[(atr(p), det_char(p))]
+    test = lambda f,p: mod_p_fact_degs(f,p) in poss_fact_pat(p)
+    
+    Sx = Set(sum([f.discriminant().support() for f in quartics], S))
+    test_primes = [p for p in primes(data['maxp']) if p not in Sx]
+    quartics = [f for f in quartics if all(test(f,p) for p in test_primes)]
+
     if verbose:
-        print("After testing all p<{}, {} possible quartics remain".format(maxp,len(quartics2)))
+        print("After testing all p<{}, {} possible quartics remain".format(data['maxp'],len(quartics)))
         
-    if not quartics2:
-        # If we get here, our list of quartics cannot have been complete
-        data['pol'] = None
-        data['gal'] = None
-        data['reducible'] = None
-        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-        print(" label = {} has a problem: reducibility not established but no quartic matches".format(label))
-        #print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-        raise RuntimeError
+    if not quartics:
+        # If we get here, we must have a reducible representation
+        if irred:
+            data['pol'] = None
+            data['gal'] = None
+            data['reducible'] = None
+            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            print(" label = {} has a problem: reducibility not established but no quartic matches".format(label))
+            #print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            raise RuntimeError
+        print("{} mod {}: Reducible".format(label, 3))
+        data['reducible'] = True
         return data
-        
+      
     
     # Otherwise, if just one quartic remains, the representation is
     # irreducible with this kernel polynomial:
     
-    if len(quartics2)==1:
-        pol = quartics2[0]
+    if len(quartics)==1:
+        pol = quartics[0]
         if pol.is_irreducible():
             pol = pol_simplify(pol, use_polredabs=True)
             id = pol.galois_group().id()
@@ -352,16 +423,18 @@ def check1form(data, verbose=False):
             print("----------------------------------------------------------")
         return data
         
-    # Step 4: Otherwise we find additional distinguishing primes.
+    # Step 5: Otherwise we find additional distinguishing primes.
         
     if verbose:
-        print("Irreducible, polynomial is one of {}:  {}".format(len(quartics2),quartics2))
+        print("##########################################################")
+        print("Irreducible, polynomial is one of {}:  {}".format(len(quartics),quartics))
         print("Computing distinguishing test prime set T0")
-    T0, vlist = get_T0mod3data(S,D,quartics2)
+        print("##########################################################")
+    T0, vlist = get_T0mod3data(S,D,quartics)
     if verbose:
         print("test prime set T0: {}".format(T0))
         print("vlist = ")
-        for v,q in zip(vlist,quartics2):
+        for v,q in zip(vlist,quartics):
             print("v={} for quartic {}".format(v,q))
             
     # Compute test vector.  Here ap=+1,-1 map to 1 and 0 to 0
@@ -372,7 +445,7 @@ def check1form(data, verbose=False):
     # NB the vectors in vlist are distinct by construction, and v should equal exactly one of them:
     if v in vlist:
         i = vlist.index(v)
-        pol = quartics2[i]
+        pol = quartics[i]
         if pol.is_irreducible():
             pol = pol_simplify(pol, use_polredabs=True)
             id = pol.galois_group().id()
@@ -396,22 +469,32 @@ def check1form(data, verbose=False):
             print("----------------------------------------------------------")
         return data
     else:
-        # If we get here, out list of quartics cannot have been complete
-        data['pol'] = None
-        data['gal'] = None
-        data['reducible'] = None
-        print("Problem: reducibility not established but no quartic matches")
-        print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
-        #raise RuntimeError
+        # If we get here, we must have a reducible representation
+        if irred:
+            data['pol'] = None
+            data['gal'] = None
+            data['reducible'] = None
+            print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            print(" label = {} has a problem: reducibility not established but no quartic matches".format(label))
+            #print("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
+            raise RuntimeError
+        print("{} mod {}: Reducible".format(label, 3))
+        data['reducible'] = True
         return data
-        
-def run(fname, dir=DATA_DIR, no_repeats=False, outfilename=None, verbose=False):
+
+def run(fname, dir=DATA_DIR, no_repeats=False, minN = None,  maxN = None, outfilename=None, verbose=False):
     ell = 3
     alldata = read_data(fname, ell, dir=dir)
-    print("finished reading data: {} forms mod 3".format(len(alldata)))
+    print(f"finished reading data: {len(alldata)} forms mod 3")
     if no_repeats:
         alldata = [data for data in alldata if data['i']==1]
-        print(" -- only processing {} distinct forms".format(len(alldata)))
+        print(f" -- only processing {len(alldata)} distinct forms")
+    if minN or maxN:
+        if minN:
+            alldata = [data for data in alldata if data['N']>=minN]
+        if maxN:
+            alldata = [data for data in alldata if data['N']<=maxN]
+        print(f" -- only processing {len(alldata)} forms with level between {minN} and {maxN}")
     nreds = 0   # count of reducibles
     nirreds = 0 # count of irreducibles
     gal_counts = {'S4':0, 'D4':0, 'V4':0}   # counts of irreducibles with projective image S4, D4, V4
@@ -433,7 +516,6 @@ def run(fname, dir=DATA_DIR, no_repeats=False, outfilename=None, verbose=False):
     else:
         for data in alldata:
             res1 = check1form(data, verbose=verbose)
-            print(display_string(res1, ell))
 
             if res1['reducible']:
                 nreds += 1

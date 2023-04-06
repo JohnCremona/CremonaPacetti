@@ -1,4 +1,4 @@
-from sage.all import ZZ#, QuadraticField, GF, NumberField, DirichletGroup
+from sage.all import ZZ, nth_prime
 
 """
 Functions to read output from modell_new (code in
@@ -39,20 +39,29 @@ def read1line(L):
     """
     fields = L.split(":")
     assert len(fields)==10
-    chi = [] if fields[8]=='[]' else [[int(c) for c in x.split(",")] for x in fields[8][2:-2].split("],[")] # list of [x,chi(x) mod ell]
+    chi_list = [] if fields[8]=='[]' else [[int(c) for c in x.split(",")] for x in fields[8][2:-2].split("],[")] # list of [x,chi(x) mod ell]
     ap = [int(ap) for ap in fields[9].split(",")]
+    nap = len(ap)
+    maxp = nth_prime(nap)
+    N = ZZ(fields[1]) # level
+    ell = ZZ(fields[6]) # the prime (2 or 3, or we have nothing more implemented)
+    Nl = N * (2 if ell==2 else 6)
+    S = (Nl).prime_divisors()
     
     data = {
         'label': fields[0], # label
-        'N':     ZZ(fields[1]), # level
+        'N':     N, # level
         'k':     ZZ(fields[2]), # weight
         'c':     fields[3], # character orbit label suffix letter(s)
         'id':    fields[4], # newform label suffix letter(s)
         'd':     ZZ(fields[5]), # degree of coefficient field
-        'ell':   ZZ(fields[6]), # the prime (2 or 3, or we have nothing more implemented)
+        'ell':   ell, # the prime (2 or 3, or we have nothing more implemented)
         'i':     int(fields[7]), # multiplicity index (see above comments)
-        'chi':   chi,
+        'chi_list':   chi_list,
         'ap':    ap,
+        'nap':   nap,
+        'maxp':  maxp,
+        'S':     S,
         }
     return data
 
@@ -61,6 +70,7 @@ DATA_DIR="/scratch/home/jcremona/Mod-l-galois-representations/data/mfmodell"
 def read_data(fname, ell, dir=DATA_DIR):
     alldata = []
     filename = "/".join([dir,str(ell),fname])
+    print(f"reading from {filename}")
     for L in open(filename).readlines():
         data = read1line(L)
         if data:

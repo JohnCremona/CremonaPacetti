@@ -27,14 +27,14 @@ except:
     cubic_lists = {}
 
 def get_cubics(S, D=None):
-    """Return a list of monic irreducible cubics with discriminant D mod
-    squares supported on S, either for one such D or (if D is None)
-    for all possible D.
-
+    """
+    Return from the cache (or compute and store) a list of monic
+    irreducible cubics with discriminant D mod squares supported on S,
+    either for one such D or (if D is None) for all possible D.
     """
     global cubic_lists
-    SS = tuple(S)
     if D:
+        SS = tuple(S)
         if (SS,D) in cubic_lists:
             return cubic_lists[(SS,D)]
         else:
@@ -43,7 +43,8 @@ def get_cubics(S, D=None):
             cubic_lists[(SS,D)] = CC
             return CC
     else:
-        return sum((get_cubics(S,D1) for D1 in (f.discriminant().squarefree_part() for f in C2_extensions(QQ,S))), [])
+        Dlist = [f.discriminant().squarefree_part() for f in C2_extensions(QQ,S)]
+        return sum((get_cubics(S,D1) for D1 in Dlist), [])
 
 # T0data[(S,cubics)] is [T0,vlist] where T0 is a list of test primes
 # and vlist a list of vectors such that a galrep is irreducible with
@@ -88,7 +89,7 @@ def process1form(data, proof=True, verbose=False):
     """
     assert data['ell'] == 2
     N = data['N']
-    S = (2*N).prime_divisors()
+    S = data['S']
     k = data['k']
     d = data['d']
     aplist = data['ap']
@@ -97,16 +98,18 @@ def process1form(data, proof=True, verbose=False):
         print(f"k = {k}")
         print(f"d = {d}")
         print(f"S = {S}")
-        #print(f"ap = {aplist}")
+
+    F2 = GF(2)
+    data['tr'] = tr = lambda p: F2(aplist[prime_pi(p)-1])
 
     # First test for irreducibility by looking at the ap mod 2.  Here
     # we have to exclude bad p since we are looking for one odd ap for
     # a good prime p.  If we find one then the galrep is certainly
-    # irreducible, otherwise we expect it tobe reducible but will work
-    # harder to prove it.
+    # irreducible, otherwise we expect it to be reducible but will
+    # need to work harder to prove it.
 
-    good_primes = primes_first_n(len(aplist))
-    BB = dict([(p,(ap,1)) for  p,ap in zip(good_primes,aplist) if p not in S])
+    primes = primes_first_n(len(aplist))
+    BB = dict([(p,(ap,1)) for  p,ap in zip(primes,aplist) if p not in S])
     irreducible = any(ap%2 for ap,np in BB.values())
     if verbose:
         if irreducible:
@@ -142,16 +145,17 @@ def process1form(data, proof=True, verbose=False):
     if verbose:
         print(f"candidate cubics: {cubics}")
     T0, vlist = get_T0data(S,cubics)
-    T0_indices = [prime_pi(p)-1 for p in T0]
     if verbose:
         print(f"test prime set T0: {T0}")
     # In order to conclude we must have the value of ap for all p in the test set T0
+    if max(T0)>data['maxp']:
+        print(f"Warning: test primes set {T0} includes primes greater than {data['maxp']} for which the trace is not in the data provided")
         
     # Compute test vector.
     try:
-        v = [int(aplist[ip]) for ip in T0_indices]
+        v = [int(tr(p)) for p in T0]
         data['ok'] = True
-    except IndexError(f"not enough ap known to conclude! The test set of primes is {T0}"):
+    except IndexError(f"not enough ap known to conclude! The test set of primes is {T0} but we only have traces for primes up to {data['maxp']}"):
         data['ok'] = False
         return data
         
