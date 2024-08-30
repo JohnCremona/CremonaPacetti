@@ -1,9 +1,7 @@
 from sage.all import ZZ, QQ, GF, DirichletGroup, prime_pi, Primes, primes, Set, NumberField, Matrix, vector, polygen, prod, PolynomialRing
 
 from read_modell_data import read_data, DATA_DIR
-from mod2test import display_string, display_all, get_cubics
-assert display_string # for pyflakes, since not used in this file
-assert display_all    # for pyflakes, since not used in this file
+from mod2test import display_string, get_cubics
 
 from poly_utils import pol_simplify
 from T0T1T2 import get_T1
@@ -91,6 +89,13 @@ def get_T0mod3data(S, D, quartics):
         pass
     return T0mod3[SSD]
 
+def sibling_sort_key(pol):
+    r"""
+    Sort key for polredabs'ed polynomials of the same degree and
+    Galois group.
+    """
+    return [NumberField(pol, 'a').absolute_discriminant().abs()] + pol.coefficients(sparse=False)
+
 def linear_lift(S, f, det_char, tr, verbose=True):
     r"""Given f, a quartic defining an S4, D4 or V4- extension unramified
     outside S with disc(f)=D, and functions det_char and tr from
@@ -141,7 +146,7 @@ def linear_lift(S, f, det_char, tr, verbose=True):
     if verbose:
         print("{} alphas: {}".format(len(alphas),alphas))
 
-    # Initialize T to be empty and A to be a matric with 0 rows and r=#alphas columns
+    # Initialize T to be empty and A to be a matrix with 0 rows and r=#alphas columns
     T = []
     A = Matrix(GF(2),0,r)
     rA = 0
@@ -175,7 +180,7 @@ def linear_lift(S, f, det_char, tr, verbose=True):
     b = [1 - ( (tr(p), det_char(p)) in [(0,2), (2,1)] ) for p in T]
     if verbose:
         print("Test vector: {}".format(b))
-    
+
     e = list(A.solve_right(vector(b)))
     assert A*vector(e) == vector(b)
     if verbose:
@@ -198,13 +203,27 @@ def linear_lift(S, f, det_char, tr, verbose=True):
         DL = Set([L.disc() for L in LL])
         g = prod([next(pol_simplify(L.defining_polynomial(), use_polredabs=True) for L in LL if L.disc()==d) for d in DL])
     else:
+        # there are two solutions, alpha and alpha*D, which will give two sibling fields
         x = polygen(QQ)
-        g = pol_simplify(ma(x**2), use_polredabs=True)
-        assert g.degree()==8 and g.is_irreducible()
-        G = g.galois_group(pari_group=True)
+        g1 = pol_simplify(ma(x**2), use_polredabs=True)
+        assert g1.degree()==8 and g1.is_irreducible()
+        G = g1.galois_group(pari_group=True)
         G_label = G.label()
+        g2 = D**4 * ma(x**2 / D)
+        print("---------------------------------")
+        g2 = pol_simplify(g2, use_polredabs=True)
+        assert g2.degree()==8 and g2.is_irreducible()
+        assert G == g2.galois_group(pari_group=True)
+        # Now we compare g1 and g2 to get the minimal sibling
+        g1g2 = [g1,g2]
+        g1g2.sort(key=sibling_sort_key)
+        g = g1g2[0]
+        if verbose:
+            print(f"linear_lift finds octics {g1} and {g2} with group {G_label}")
+            print(f"After sorting, {g} comes first")
+        # Now we should compare g1 and g2 to get the minimal sibling
     if verbose:
-        print("linear_lift returns octic {} with group {}".format(g, G_label))
+        print(f"linear_lift returns octic {g} with group {G_label}")
         print("-------------------------------------------------")
     return g
 
@@ -274,7 +293,7 @@ def get_possible_cubics(data, verbose=True):
 def check1form(data, verbose=False):
     assert data['ell'] == 3
     F3 = GF(3)
-    label = data['label']
+    label = data['xlabel'] if 'xlabel' in data else data['label']
     if verbose:
         print("==========================================================")
         print("label = {}".format(label))
@@ -516,6 +535,7 @@ def run(fname, dir=DATA_DIR, no_repeats=False, minN = None,  maxN = None, outfil
     else:
         for data in alldata:
             res1 = check1form(data, verbose=verbose)
+            print(display_string(res1, ell)+"\n")
 
             if res1['reducible']:
                 nreds += 1

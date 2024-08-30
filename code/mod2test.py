@@ -145,12 +145,19 @@ def process1form(data, proof=True, verbose=False):
     if verbose:
         print(f"candidate cubics: {cubics}")
     T0, vlist = get_T0data(S,cubics)
+    if not T0:
+        if verbose:
+            print("Reducible -- no candidate cubics")
+            print("----------------------------------------------------------")
+        data['reducible'] = True
+        return data
+
     if verbose:
         print(f"test prime set T0: {T0}")
     # In order to conclude we must have the value of ap for all p in the test set T0
     if max(T0)>data['maxp']:
         print(f"Warning: test primes set {T0} includes primes greater than {data['maxp']} for which the trace is not in the data provided")
-        
+
     # Compute test vector.
     try:
         v = [int(tr(p)) for p in T0]
@@ -158,7 +165,7 @@ def process1form(data, proof=True, verbose=False):
     except IndexError(f"not enough ap known to conclude! The test set of primes is {T0} but we only have traces for primes up to {data['maxp']}"):
         data['ok'] = False
         return data
-        
+
     if verbose:
         print(f"test vector = {v}")
     if v in vlist:
@@ -187,23 +194,23 @@ def display_string(data, ell=2, concise=True):
         if not concise:
             pad1 = f" mod {ell}"
             pad2 = "  "
-        return "".join([f"{data['label']}", pad1, ":", pad2, "reducible"])
+        return "".join([f"{data['xlabel']}", pad1, ":", pad2, "reducible"])
 
     pol = data['pol']
     if concise:
         if ell==2:
-            line = f"{data['label']}:{data['gal']}:{pol}"
+            line = f"{data['xlabel']}:{data['gal']}:{pol}"
         else:
-            line = f"{data['label']}:{data['lingal']}:{data['octic'].factor()}:{data['gal']}:{pol.factor()}"
+            line = f"{data['xlabel']}:{data['lingal']}:{data['octic'].factor()}:{data['gal']}:{pol.factor()}"
         line = line.replace(" ", "")
     else:
         detdisc = pol.discriminant().squarefree_part()
         if detdisc%4 != 1:
             detdisc*=4
         if ell==2:
-            line = f"{data['label']} mod {ell}:  image {data['gal']}, splitting field polynomial {pol}; determinant field discriminant {detdisc}"
+            line = f"{data['xlabel']} mod {ell}:  image {data['gal']}, splitting field polynomial {pol}; determinant field discriminant {detdisc}"
         else:
-            line = "\n".join([f"{data['label']} mod {ell}:  linear image {data['lingal']}, splitting field polynomial {data['octic'].factor()};",
+            line = "\n".join([f"{data['xlabel']} mod {ell}:  linear image {data['lingal']}, splitting field polynomial {data['octic'].factor()};",
                               f"           projective image {data['gal']}, splitting field polynomial {pol.factor()}; determinant field discriminant {detdisc}"])
     return line
 
@@ -218,8 +225,8 @@ def display_all(datalist, ell=2, concise=True, fname=None):
     else:
         for data in datalist:
             print(display_string(data, ell, concise))
-    
-def run(fname, dir=DATA_DIR, no_repeats=False, outfilename=None, concise=True, verbose=False):
+
+def run(fname, dir=DATA_DIR, no_repeats=False, outfilename=None, concise=True, proof=True, verbose=False):
     ell = 2
     alldata = read_data(fname, ell, dir=dir)
     print("finished reading data: {} newforms".format(len(alldata)))
@@ -233,7 +240,7 @@ def run(fname, dir=DATA_DIR, no_repeats=False, outfilename=None, concise=True, v
     if outfilename:
         with open(outfilename, 'a') as outfile:
             for data in alldata:
-                res1 = process1form(data, proof=False, verbose=verbose)
+                res1 = process1form(data, proof=proof, verbose=verbose)
                 line = display_string(res1, ell, concise)
                 outfile.write(line+"\n")
                 if verbose:
@@ -246,7 +253,7 @@ def run(fname, dir=DATA_DIR, no_repeats=False, outfilename=None, concise=True, v
                     gal_counts[res1['gal']] +=1
     else:
         for data in alldata:
-            res1 = process1form(data,  proof=False, verbose=verbose)
+            res1 = process1form(data,  proof=proof, verbose=verbose)
             line = display_string(res1, ell, concise)
             print(line)
 
