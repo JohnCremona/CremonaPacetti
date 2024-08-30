@@ -47,41 +47,45 @@ def get_disc(K, S, BB, mod4=False, verbose=False):
     2. if \rho(Frob_P) mod 2 has order 2, then t%2 == 0 and r%2 == 0;
     3. if \rho(Frob_P) mod 2 has order 3, then t%2 == 1 and r%2 == 1.
 
-    Note that Case 3 will happen if and only if the representation is
+    Note that Case 3 is possible if and only if the representation is
     irreducible, and will occur for a set of primes of density 1/3
     (for S3 image) or 2/3 (for C3 image).
 
     For P which are split in the discriminant field, \rho(Frob_P) mod
-    2 has order 1 or 3, so r=0,1,3; while if P is inert then
-    \rho(Frob_P) mod 2 has order 2, so r=0 or 2.   
+    2 has order 1 or 3, so r%4 = 0, 1, or 3; while if P is inert then
+    \rho(Frob_P) mod 2 has order 2, so r%4 = 0 or 2.
 
     Hence:
-     if t%2==1 then P is split (image has order 3);
-     otherwise if r%4==2 then P is inert (image has order 2);
-     else we cannot tell (image may have order 1 or 2).
+
+    - if t%2==1 then P is split (image has order 3);
+    -  otherwise, if r%4==2 then P is inert (image has order 2);
+    -             else we cannot tell (image may have order 1 or 2).
 
     If the image is C3 then using only primes with odd trace is
     sufficient to saturate the matrix and D=1 will be returned.  This
-    only uses the traces mod 2.
+    only uses the traces mod 2. Justification: for all candidate D
+    not 1 there are infinitely many -- density 1/2 -- primes which are
+    inert, so all D not 1 can be eliminated.
 
     If the image is S3 with discriminant D, then primes with odd trace
-    will saturate up to codimension 1, at which point D will be
+    will saturate up to codimension 1 (justification as above: all
+    other D except 1 can be eliminated), at which point D will be
     (represented by) the unique mod-2 vector orthogonal to every row
     of the matrix M, which we can then find by computing the right
-    kernel of M.  This would only use traces mod 2.  However, if we
-    have mod-4 information in the BB values, then we may also using
-    primes of even trace (with the trace and determinant values mod 4)
-    we can usually saturate the matrix and then use the test vector to
-    find D; this can fail, for example with elliptic curve '162a1'
-    where the discriminant is -1 (mod squares), so we have even trace
-    for all p=3 (mod 4) but for all these we have 1+p-ap=0 (mod 4).
+    kernel of M.  This would still only use traces mod 2.  However, if
+    we do have mod-4 information in the BB values, then we may also
+    use primes of even trace (with the trace and determinant values
+    mod 4), and can usually saturate the matrix and then use the test
+    vector to find D; but this can fail, for example with elliptic
+    curve '162a1' where the discriminant is -1 (mod squares), so we
+    have even trace for all p=3 (mod 4) but for all these we have
+    1+p-ap=0 (mod 4).
 
     Hence the code must allow for M to only saturate up to codimension
-    1, even in the irreducible case.  Hence we do expect that for
-    irreducible representations we will encounter many primes with odd
-    trace, and hence prove irreducubility, unless the Black Box has
-    very little data in it.
-
+    1, even in the irreducible case.  Nevertheless, we do expect that,
+    for irreducible representations, we will encounter many primes
+    with odd trace, and hence prove irreducubility, unless the Black
+    Box has very little data in it.
     """
     # Make sure primes above 2 are all in S
     if K.degree()==1:
@@ -160,7 +164,7 @@ def get_disc(K, S, BB, mod4=False, verbose=False):
             return disc
         print("Irreducible but saturation codimension >1: need to provide aP for more primes")
         return 0
-        
+
     if verbose:
         print("Final test set of primes is {}".format(T))
         print("Test vector = {}".format(V))
