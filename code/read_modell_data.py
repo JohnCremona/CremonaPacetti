@@ -1,7 +1,6 @@
 from sage.all import ZZ, nth_prime
 
-"""
-Functions to read output from modell_new (code in
+"""Functions to read output from modell_new (code in
 https://github.com/sanni85/Mod-l-galois-representations/tree/master/code/mfmodell)
 
 Format of each line of output (produced by the function data_output():
@@ -27,15 +26,21 @@ e.g. (nontrivial character with nontrivial reduction)
 e.g. (nontrivial character with trivial reduction)
 19.2.e.a:19:2:e:a:6:3:2:[[2,1]]:0,1,0,2,0,2,0,1,0,0,2,2,0,2,0,0,0,2,2,0,2,2,0,0,2
 
-
 Note that if the newform has nontrivial character which is trivial
 mod ell then the character values will still be listed (they will
 all be 1), but if the characteristic zero character is trivial then
 the chi_mod_ell field is just []. This is always the case when ell=2 of course.
+
 """
 
 def read1line(L):
-    """Parse one in put line and return data as a dict
+    """
+    Parse one in put line and return data as a dict.
+
+    NB There may be several input lines with the same label (when one
+    modular form has several mod-ell reductions).  This function only sees
+    single lines, so that must be handled by the calling function.
+
     """
     fields = L.split(":")
     assert len(fields)==10
@@ -47,7 +52,7 @@ def read1line(L):
     ell = ZZ(fields[6]) # the prime (2 or 3, or we have nothing more implemented)
     Nl = N * (2 if ell==2 else 6)
     S = (Nl).prime_divisors()
-    
+
     data = {
         'label': fields[0], # label
         'N':     N, # level
@@ -65,18 +70,25 @@ def read1line(L):
         }
     return data
 
-DATA_DIR="/scratch/home/jcremona/Mod-l-galois-representations/data/mfmodell"
+import os
+HOME = os.getenv("HOME")
+DATA_DIR=os.path.join(HOME, "Mod-l-galois-representations/data/mfmodell")
 
 def read_data(fname, ell, dir=DATA_DIR):
     alldata = []
     filename = "/".join([dir,str(ell),fname])
+    label_counter = {} # counts how many times each label has been seen and decorates the label accordingly
     print(f"reading from {filename}")
     for L in open(filename).readlines():
         data = read1line(L)
         if data:
+            label = data['label']
+            i = label_counter.get(label, 0) + 1
+            label_counter[label] = i
+            xlabel = "-".join([label, str(i)])
+            data['xlabel'] = xlabel
             alldata.append(data)
     return alldata
-
 
 """
 Below this line are old versions written in 2018 when the data files were from Drew's Magma code
