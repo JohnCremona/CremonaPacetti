@@ -34,7 +34,7 @@ def get_disc(K, S, BB, mod4=False, verbose=False):
     In the former case, we will have proved that the representation is
     irreducible and found the discriminant (mod squares) of its
     splitting field.  We can use this to find the splitting field
-    itself.  In the latter case, we expect that the representatioin is
+    itself.  In the latter case, we expect that the representation is
     reducible, but will need to do more work to prove this.
 
     ALGORITHM:
@@ -69,7 +69,7 @@ def get_disc(K, S, BB, mod4=False, verbose=False):
 
     If the image is S3 with discriminant D, then primes with odd trace
     will saturate up to codimension 1 (justification as above: all
-    other D except 1 can be eliminated), at which point D will be
+    other discriminants except 1 can be eliminated), at which point D will be
     (represented by) the unique mod-2 vector orthogonal to every row
     of the matrix M, which we can then find by computing the right
     kernel of M.  This would still only use traces mod 2.  However, if
@@ -113,26 +113,27 @@ def get_disc(K, S, BB, mod4=False, verbose=False):
         aP, nP = BB[P]
         v = 0
         aPodd = aP%2==1
+        fP1 = 1-aP+nP
         if aPodd: # then irreducible and P splits
             reducible = False
         else:
             if not mod4:
                 continue
-            if (1-aP+nP)%4==2: # then P inert
+            if fP1%4==2: # then P inert
                 v = 1
             else: # 1-aP+nP = 0 (mod 4), ambiguous
                 if verbose:
-                    print("Skipping P={} since (aP,nP)=({},{})=({},{}) mod 4".format(P,aP,nP,aP%4,nP%4))
+                    print(f"Skipping {P=} since (aP,nP)=({aP},{nP})=({aP%4},{nP%4}) mod 4, fP(1)={fP1}={fP1%4} mod 4")
                 continue
         if verbose:
             if mod4:
-                print("Using P={} with (aP,nP)=({},{})=({},{}) mod 4, so v={}".format(P,aP,nP,aP%4,nP%4, v))
+                print(f"Using {P=} with (aP,nP)=({aP},{nP})=({aP%4},{nP%4}) mod 4, fP(1)={fP1}={fP1%4} mod 4, so v={v}")
             else:
-                print("Using P={} with aP={} mod 2".format(P,aP))
+                print(f"Using P={P} with aP={aP}={aP%2} mod 2")
 
         row = vector([is_P_inert(a,P) for a in KS2])
         if verbose:
-            print("New row is {}".format(row))
+            print(f"New row is {row}")
         M1 = M.stack(row)
         r1 = M1.rank()
         if r==r1:
@@ -151,7 +152,7 @@ def get_disc(K, S, BB, mod4=False, verbose=False):
 
     if r < rKS2:
         if verbose and mod4:
-            print("Unable to saturate matrix using {} primes!".format(len(BB)))
+            print(f"Unable to saturate matrix using {len(BB)} primes!")
         if reducible:
             # we have not proved reducible but have no evidence of irreducible
             return 0
@@ -159,20 +160,20 @@ def get_disc(K, S, BB, mod4=False, verbose=False):
             exponents = [int(e) for e in M.right_kernel().basis()[0]]
             disc = prod((a for e,a in zip(exponents,KS2) if e), K(1))
             if verbose:
-                print("Exponent vector = {}".format(exponents))
-                print("discriminant = {}".format(disc))
+                print(f"Exponent vector = {exponents}")
+                print(f"discriminant = {disc}")
             return disc
         print("Irreducible but saturation codimension >1: need to provide aP for more primes")
         return 0
 
     if verbose:
-        print("Final test set of primes is {}".format(T))
-        print("Test vector = {}".format(V))
+        print(f"Final test set of primes is {T}")
+        print(f"Test vector = {V}")
     V = vector(GF(2), V)
     Minv = M.inverse()
     exponents = [int(e) for e in Minv*V]
     if verbose:
-        print("Exponent vector = {}".format(exponents))
+        print(f"Exponent vector = {exponents}")
     disc = prod((a for e,a in zip(exponents,KS2) if e), K(1))
 
     # check:
@@ -204,13 +205,14 @@ def testE(E, maxn=100, mod4=True, verbose=False):
     S = (2*N).support()
     discE = E.discriminant()
     if verbose:
-        print("Testing E = {} = {}".format(E.label(), E.ainvs()))
-        print("disc(E) = {}".format(discE))
+        print(f"Testing E = {E.ainvs()}")
+        print(f"disc(E) = {discE}")
+        print(f"#S = {len(S)}")
     BB = BBfromEC(E, maxn)
     D = get_disc(K, S, BB, mod4, verbose=verbose)
     if D:
         if verbose:
-            print("found D = {}".format(D), end="")
+            print(f"found D = {D}", end="")
         ok = (D*discE).is_square()
         if verbose:
             if ok:

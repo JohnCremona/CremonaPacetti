@@ -45,7 +45,7 @@ def S4D4V4_extensions(S, D, cubics, verbose=True):
     return S4s + D4s + V4s
 
 def get_quartics(S, D, cubics):
-    """Return from the cacahe or compute a list of S4,D4 or V4 quartics
+    """Return from the cache or compute a list of S4,D4 or V4 quartics
     unramified outside S, with discriminant D and (for S4s) with cubic
     resolvent in the list cubics.
     """
