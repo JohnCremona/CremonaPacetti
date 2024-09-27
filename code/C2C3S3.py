@@ -81,12 +81,12 @@ def is_S_unit(a, S):
     if K in [ZZ,QQ]:
         return QQ(a).is_S_unit(S)
     # fractional ideals also have such a method:
-    #print("Checking whether {} in {} is an S-unit with S={}...".format(a,K,S))
+    #print(f"Checking whether {a=} in {K=} is an S-unit with {S=}...")
     try:
         ok = a.is_S_unit(S)
     except AttributeError:
         ok = K.ideal(a).is_S_unit(S)
-    #print("... {}".format(ok))
+    #print(f"... {if ok then 'OK' else 'NO'}")
     return ok
 
 def unramified_outside_S(L,S, p=None, debug=False):
@@ -110,7 +110,7 @@ def unramified_outside_S(L,S, p=None, debug=False):
     # This one-liner works but is slow
     # return L.relative_discriminant().is_S_unit(S)
     if debug:
-        print("testing ramification of {}".format(L))
+        print(f"testing ramification of {L}")
     f = L.defining_polynomial()
     d = f.discriminant()
     K = f.base_ring()
@@ -124,7 +124,7 @@ def unramified_outside_S(L,S, p=None, debug=False):
             D /= P
     # now D is the prime-to-S part of disc(f)
     if debug:
-        print("Prime-to-S part of disc = {} with norm {}".format(D,D.absolute_norm()))
+        print(f"Prime-to-S part of disc = {D} with norm {D.absolute_norm()}")
 
     try:
         bads = D.prime_factors()
@@ -135,7 +135,7 @@ def unramified_outside_S(L,S, p=None, debug=False):
         p = K(p)
         bads = [P for P in bads if p.valuation(P)>0]
     if debug:
-        print("bads = {}".format(bads))
+        print(f"{bads = }")
     if not bads:
         if debug:
             print("OK: no bad primes in disc")
@@ -148,10 +148,10 @@ def unramified_outside_S(L,S, p=None, debug=False):
     # powers, and we must work harder to see if L is ramified at these
     # primes.
     if debug:
-        print("final check of {} bad primes in disc: {}".format(len(bads), bads))
+        print(f"final check of {len(bads)} bad primes in disc: {bads}")
     for P in bads:
         if debug:
-            print("Testing whether {} is ramified in L".format(P))
+            print(f"Testing whether {P} is ramified in L")
         for Q in L.primes_above(P):
             e = Q.relative_ramification_index()
             if e>1:
@@ -245,28 +245,127 @@ def C3_extensions(K,S, verbose=False, debug=False):
 
     .. note::
 
-       If `K` contains the cube roots of unity, these all have the
-       form `K(\root[3]{a})` for `a\in (K(S,3)`, but if `S` does not
-       contain all primes dividing 3 some of these may be ramified at
-       primes dividing 3 not in `S` so we need to do an additional
-       check. In the general case we need to work harder: we work over
-       `K(\zeta_3)` and then descend.
+       We just use the S3-extensions code with D=1.
+
+    """
+    return S3_extensions(K, S, 1, check_D=False, verbose=verbose)
+
+############## S3 (non-cyclic cubic extensions) ###############################
+
+def S3_extensions(K,S, D=None, check_D=True,
+                  include_cyclics=False, verbose=False):
+    r"""Return irreducible cubics whose splitting fields are `C_3` or `S_3`
+    extensions of ``K`` unramified outside ``S``.
+
+    If ``D`` is None, return all `S_3` extensions if
+    ``include_cyclics`` is ``False``, or all these and also all `C_3`
+    extensions if ``include_cyclics`` is ``True``.
+
+    If ``D`` is not None then it must be an element of $K^*$ which is
+    a square, or such that $K(\sqrt(D))$ is a quadratic extension
+    unramified outside ``S``, and only cubics with discriminant ``D``
+    (mod squares) are returned.  This condition on ``D`` is checked
+    unless check_D is False.
+
+    INPUT:
+
+    - ``K`` (number field) -- a number field, or ``QQ``.
+
+    - ``S`` (list) -- a list of prime ideals in ``K``, or primes.
+
+    - ``D`` (number field element or ``None``, default ``None``) -- if
+      not ``None``, a nonzero element of ``K`` such that $K(\sqrt{D})$
+      is unramified outside ``S``.
+
+    - ``check_D`` (boolean, default ``False``) -- if ``D`` is not
+      ``None``, check that $K(\sqrt{D})$ is unramified outside ``S``;
+      ignored if ``D`` is ``None``.
+
+    - ``include_cyclics`` (boolean, default ``False``) -- ignored if
+      ``D`` is not ``None``, otherwise return `C_3` extensions as well
+      as `S_3` extensions.
+
+    - ``verbose`` (boolean, default ``False``) -- verbosity flag.
+
+    OUTPUT:
+
+    (list) A list of monic polynomials of degree 3 in `K[x]` defining
+    all Galois or non-Galois cubic extensions of `K` unramified
+    outside `S`, or just those whose discriminant is ``D`` (modulo
+    squares) if ``D`` is given.  When `D=1`, a list of cyclic (Galois)
+    cubics unramified outside `S`.
+
     """
     S = uniquify(S)
-    x = polygen(K)
+    Kx = PolynomialRing(K, 'x')
+    x = Kx.gen()
+    if D:
+        D = K(D)
+        sqrt_minus3_in_K = K(-3).is_square()
+        D_is_1 = D.is_square()
+        D_is_minus3 = (-3*D).is_square()
+    three_is_S_unit = is_S_unit(K(3),S)
+
     if verbose:
-        print("finding C3 extensions over {} unramified outside {}".format(K,S))
-
-    if K(-3).is_square(): ## K contains cube roots of unity
-        if is_S_unit(K(3),S): # primes dividing 3 are in S -- easy case
-            test = lambda a: True
+        if D:
+            if D_is_1:
+                print(f"finding C3 extensions over {K} unramified outside {S} with discriminant {D}")
+            else:
+                print(f"finding S3 extensions over {K} unramified outside {S} with discriminant {D}")
         else:
-            test = lambda a: unramified_outside_S(K.extension(x**3-a,'t3'), S, 3)
-        # use K(S,3), omitting trivial element and only including one of a, a^-1:
-        return [pol_simplify(x**3-a) for a in selmer_group_projective(K,S,3) if test(a)]
+            if include_cyclics:
+                print(f"finding C3 and S3 extensions over {K} unramified outside {S}")
+            else:
+                print(f"finding S3 extensions over {K} unramified outside {S}")
 
-    # now K does not contain the cube roots of unity.  We adjoin them.
-    # See Angelos Koutsianas's thesis Algorithm 3 (page 45)
+
+    if not D:
+        cubics = []
+        if include_cyclics:
+            cubics = S3_extensions(K,S, 1, False, verbose)
+            if verbose:
+                print(f"{len(cubics)} C3 cubics found: {cubics}")
+        Ds = [f.discriminant() for f in C2_extensions(K,S)]
+        if K is QQ:
+            Ds = [d.squarefree_part() for d in Ds]
+        if verbose:
+            print(f"{len(Ds)} possible quadratic subfields, discriminants {Ds}")
+        for d in Ds:
+            #print(f"working on discriminant {d}")
+            cubics1 = S3_extensions(K,S, d, False, verbose)
+            if verbose:
+                print(f"{d=}: {len(cubics1)} S3 cubics found: {cubics1}")
+            cubics += cubics1
+        return cubics
+
+    # Now D is fixed.  There are two cases:
+
+    # (1) if D=1 and -3 is square, or D=-3 and -3 is not square, return x^3-a for a in P^1K(S,3)
+
+    # (2) if D=1 and -3 is not square, or D is not -3, let
+    # L=K(sqrt(-3D)), return x**3-3*b*x-t where b^3=N(a), t=Tr(a),
+    # for a in ker(L(S,3) --> K(S,3)).
+
+    # In each case if 3 is not an S-unit we make a final check for being unramified outide S.
+
+    # Case (1)
+
+    if (D_is_1 and sqrt_minus3_in_K) or (D_is_minus3 and not sqrt_minus3_in_K):
+        cubics = [pol_simplify(x**3-a) for a in selmer_group_projective(K,S,3)]
+        if not three_is_S_unit:
+            cubics = [f for f in cubics if unramified_outside_S(K.extension(f,'t3'), S, 3)]
+        return cubics
+
+    # Case (2)
+
+    L = K.extension(Kx([3*D,0,1]), 't1')
+    if check_D:
+        S3 = uniquify(S + [3] if K is QQ else S + K.primes_above(3))
+        if not unramified_outside_S(L, S3):
+            raise ValueError(f"invalid discriminant {D=} (quadratic not unramified outside {S3})")
+
+    # find the primes of L above those in S
+    SL = sum([L.primes_above(p) for p in S],[])
 
     if verbose:
         print("finding alphas")
@@ -274,97 +373,97 @@ def C3_extensions(K,S, verbose=False, debug=False):
     # Find downstairs Selmer group and maps:
     KS3, KS3_gens, from_KS3, to_KS3 = K.selmer_space(S,ZZ(3))
     if verbose:
-        print("Downstairs 3-Selmer group has dimension {}".format(KS3.dimension()))
+        print(f"Downstairs 3-Selmer group has dimension {KS3.dimension()}")
 
     # Find upstairs Selmer group and maps:
-    K3 = K.extension(x**2+x+1,'z3')
-    nm = lambda p: p if p in ZZ else p.absolute_norm()
-    S3 = sum([K3.primes_above(P) for P in S if nm(P)%3!=2],[])
-    K3S3, K3S3_gens, from_K3S3, to_K3S3 = K3.selmer_space(S3,ZZ(3))
+    LS3, LS3_gens, from_LS3, to_LS3 = L.selmer_space(SL,ZZ(3))
     if verbose:
-        print("Upstairs 3-Selmer group has dimension {}".format(K3S3.dimension()))
+        print(f"Upstairs 3-Selmer group has dimension {LS3.dimension()}")
 
-    # construct norm map from K3S3 to KS3 and find its kernel:
-    N = K3S3.hom([to_KS3(from_K3S3(v).norm(K)) for v in K3S3.basis()], KS3)
-    ker = N.kernel()
-    Pker = ProjectiveSpace(ker.dimension()-1,ker.base())
-    alphas = [from_K3S3(ker.linear_combination_of_basis(list(v))) for v in Pker]
+    # construct norm map from LS3 to KS3 and find its kernel.
+    # The alphas are the nontrivial elements of this kernel up to inversion.
+    N = LS3.hom([to_KS3(from_LS3(v).norm(K)) for v in LS3.basis()], KS3)
+    kerN = N.kernel()
+    if kerN.dimension():
+        Pker = ProjectiveSpace(kerN.dimension()-1,kerN.base())
+        alphas = [from_LS3(kerN.linear_combination_of_basis(list(v))) for v in Pker]
 
-    # The alphas are the elements of this kernel
-    if verbose:
-        print("found {} alphas".format(len(alphas)))
-        #print(alphas)
+        if verbose:
+            print(f"found {len(alphas)} alphas")
+    else:
+        if verbose:
+            print(f"found no alphas alphas")
+        return []
 
     # Compute the trace of each alpha:
     try:
         traces = [a.trace(K) for a in alphas]
     except TypeError:
         traces = [a.trace() for a in alphas]
-    if verbose: print("computed {} traces".format(len(traces)))
+    if verbose:
+        print(f"computed {len(traces)} traces")
 
     # Compute the betas, cube roots of each alpha's norm:
     betas = [a.norm(K).nth_root(3) for a in alphas]
-    if verbose: print("computed {} betas".format(len(betas)))
+    if verbose:
+        print(f"computed {len(betas)} betas")
 
     # Form the polynomials
-    polys = [x**3-3*b*x-t for b,t in zip(betas, traces)]
-    if verbose: print("computed {} polys".format(len(polys)))
-
-    # NB because of the additional extension, these may be ramified at
-    # primes above 3, not all of which are necessarily in S, so we
-    # must check.  If S already contained all primes dividing 3 this
-    # would already be the desired list.
-
-    check_3 = not is_S_unit(K(3),S)
-    if check_3 and verbose:
-        print("3 is not an S-unit, so we will need to check ramification at primes above 3 not in S")
-    if debug or check_3:
-        fields = [K.extension(f,'t3') for f in polys]
-        if verbose: print("computed fields, checking ramification")
+    cubics = [x**3-3*b*x-t for b,t in zip(betas, traces)]
+    fields = [K.extension(f,'t3') for f in cubics]
     if K == QQ:
-        if not (debug or check_3):
-            fields = [K.extension(f,'t3') for f in polys]
-
         fields = [L.optimized_representation()[0] for L in fields]
-        polys = [L.defining_polynomial() for L in fields]
-
-    # (debug) check the fields are not isomorphic (relative to K):
-    if debug:
-        if K==QQ:
-            assert all([not any([fields[i].is_isomorphic(fields[j])
-                                 for j in range(i)]) for i in range(len(fields))])
-        else:
-            assert all([not any([fields[i].is_isomorphic_relative(fields[j])
-                                 for j in range(i)]) for i in range(len(fields))])
-
-    # the polys we have are already guaranteed to be unramified
-    # outside S, by construction, except possibly at primes dividing 3
-    # not in S.
-    if check_3:
-        polys_and_fields = zip(polys,fields)
-        if verbose:
-            print("Final check of primes dividing 3 not in S")
-        polys_and_fields = [fL for fL in polys_and_fields if unramified_outside_S(fL[1],S,3)]
-        if verbose:
-            print("After final check, {} polys remain".format(len(polys_and_fields)))
-        polys  = [f for f,L in polys_and_fields]
-        fields = [L for f,L in polys_and_fields]
-    if debug:
-        if not polys == [f for f,L in zip(polys,fields) if unramified_outside_S(L,S)]:
-            print("Problem: relative discriminants are {}".format([L.relative_discriminant().factor() for L in fields]))
-        else:
-            if verbose: print("computed unramified polys OK")
+        cubics = [L.defining_polynomial() for L in fields]
     if verbose:
-        print("{} polys found".format(len(polys)))
-    if K.absolute_degree()<6:
+        print(f"computed {len(cubics)} cubics")
+
+    # These may be ramified at primes above 3, not all of which are
+    # necessarily in S, so we must check.  If S already contained all
+    # primes dividing 3 this would already be the desired list.
+    if not three_is_S_unit:
+        if verbose:
+            print("3 is not an S-unit, so we will need to check ramification at primes above 3 not in S")
+        cubics = [f for f,F in zip(cubics,fields) if unramified_outside_S(F,S,3)]
+        if verbose:
+            print(f"After final check, {len(cubics)} cubics remain")
+    if verbose:
+        print(f"{len(cubics)} cubics found")
+    if K.absolute_degree()<7:
         if verbose:
             print("-- applying pol_simplify...")
-        polys = [pol_simplify(f) for f in polys]
-    return polys
+        cubics = [pol_simplify(f) for f in cubics]
 
-############## S3 (non-cyclic cubic extensions) ###############################
+    bad_cubics = [f for f in cubics if not (f.discriminant()*D).is_square()]
+    if bad_cubics:
+        print("Not all returned cubics have the right discriminant!")
+        for f in bad_cubics:
+            print(f"{f = } has discriminant {f.discriminant()}")
+        cubics = [f for f in cubics if f not in bad_cubics]
+    return cubics
 
-def S3_extensions(K,S, D=None, check_D=True, verbose=False):
+############## C3 & S3 extensions ###############################
+
+def C3S3_extensions(K,S, verbose=False):
+    r"""Return all `C_3` and  `S_3` extensions of ``K`` unramified outside ``S``.
+
+    INPUT:
+
+    - ``K`` (number field) -- a number field, or ``QQ``.
+
+    - ``S`` (list) -- a list of prime ideals in ``K``, or primes.
+
+    - ``verbose`` (boolean, default ``False``) -- verbosity flag.
+
+    OUTPUT:
+
+    (list) A list of monic polynomials of degree 3 in `K[x]` defining
+    all Galois or non-Galois cubic extensions of `K` unramified outside `S`.
+    """
+    return S3_extensions(K,S, include_cyclics=True, verbose=verbose)
+
+################### older, slower, versions ##############################
+
+def S3_extensions_old(K,S, D=None, check_D=True, verbose=False):
     r"""Return irreducible cubics whose splitting fields are `S_3`
     extensions of ``K`` unramified outside ``S``.
 
@@ -396,9 +495,9 @@ def S3_extensions(K,S, D=None, check_D=True, verbose=False):
     Kx = PolynomialRing(K, 'x')
     if verbose:
         if D:
-            print("finding S3 extensions over {} unramified outside {} with discriminant {}".format(K,S,D))
+            print("finding S3 extensions over {K} unramified outside {S} with discriminant {D}")
         else:
-            print("finding S3 extensions over {} unramified outside {}".format(K,S))
+            print("finding S3 extensions over {K} unramified outside {S}")
 
 
     if not D:
@@ -406,13 +505,13 @@ def S3_extensions(K,S, D=None, check_D=True, verbose=False):
         if K is QQ:
             Ds = [d.squarefree_part() for d in Ds]
         if verbose:
-            print("{} possible quadratic subfields".format(len(Ds)))
+            print("{len(Ds)} possible quadratic subfields")
         cubics = []
         for d in Ds:
-            #print("working on d={}".format(d))
-            cubics1 = S3_extensions(K,S, d, False, verbose)
+            #print(f"working on {d=}")
+            cubics1 = S3_extensions_old(K,S, d, False, verbose)
             if verbose:
-                print("d={}: {} cubics found: {}".format(d,len(cubics1),cubics1))
+                print(f"{d=}: {len(cubics1)} cubics found: {cubics1}")
             cubics = cubics+cubics1
         return cubics
 
@@ -420,7 +519,7 @@ def S3_extensions(K,S, D=None, check_D=True, verbose=False):
     M = K.extension(Kx([-D,0,1]), 't1')
     if check_D:
         if not unramified_outside_S(M, S):
-            raise ValueError("invalid discriminant D={} (quadratic not unramified outside {})".format(D, S))
+            raise ValueError(f"invalid discriminant D={D} (quadratic not unramified outside {S})")
 
     # compute the generator of Gal(M/K)
     g = next(e for e in M.automorphisms() if e(M.gen()) != M.gen())
@@ -438,10 +537,10 @@ def S3_extensions(K,S, D=None, check_D=True, verbose=False):
 
     # Find all C3 extensions of M unramified outside SM:
     if verbose:
-        print("first find C3 extensions of {}".format(M))
-    cubics = C3_extensions(M,SM,verbose=verbose) #all the cubic extensions of M unramified outside SM
+        print(f"first find C3 extensions of {M}")
+    cubics = C3_extensions_old(M,SM,verbose=verbose) #all the cubic extensions of M unramified outside SM
     if verbose:
-        print("{} cubics found".format(len(cubics)))
+        print(f"{len(cubics)} cubics found")
 
     if len(cubics)==0:
         return []
@@ -468,10 +567,10 @@ def S3_extensions(K,S, D=None, check_D=True, verbose=False):
 
     def test(f):
         if verbose:
-            print("testing {}".format(f))
+            print(f"testing {f}")
         fbar = Mx([g(c) for c in f.coefficients(sparse=False)])
         if verbose:
-            print("f = {}, fbar = {}".format(f,fbar))
+            print(f"{f = }, {fbar = }")
         if f==fbar:
             if verbose:
                 print("easy case as this f is in K[x]")
@@ -479,7 +578,7 @@ def S3_extensions(K,S, D=None, check_D=True, verbose=False):
             if h.discriminant().is_square():
                 return False
             if verbose:
-                print("*** returning {} as valid".format(h))
+                print(f"*** returning {h} as valid")
             return h
 
         # f splits over L, since L/M is C3.  Test if fbar also splits
@@ -495,8 +594,8 @@ def S3_extensions(K,S, D=None, check_D=True, verbose=False):
         # cubic over K with splitting field L/K:
         f_roots = f.roots(L, multiplicities=False)
         if verbose:
-            print("roots of f:    {}".format(f_roots))
-            print("roots of fbar: {}".format(fbar_roots))
+            print("roots of f:    {f_roots}")
+            print("roots of fbar: {fbar_roots}")
 
         y = f_roots[0]+fbar_roots[0]
         h = y.minpoly()
@@ -508,7 +607,7 @@ def S3_extensions(K,S, D=None, check_D=True, verbose=False):
         # not in K it has degree 3 over K so its min poly is the cubic
         # we seek.
         if verbose:
-            print("f, fbar distinct.  Using y={} with minpoly {}".format(y,h))
+            print(f"f, fbar distinct.  Using {y=} with minpoly {h}")
         # h is in K[x] when S3. If h is not in K[x] then certainly C6;
         # if h is in K[x] it may be C6 and we have to check the
         # discriminant later.  So far h is in M[x] since y is in L and
@@ -522,14 +621,14 @@ def S3_extensions(K,S, D=None, check_D=True, verbose=False):
             return False
         h = Kx([c[0] for c in coeffs])
         if verbose:
-            print("h = {}".format(h))
+            print(f"{h = }")
         if h.discriminant().is_square():
             if verbose:
                 print("*** C6, not S3 over K (discriminant is square)")
             return False
         assert h.is_irreducible()
         if verbose:
-            print("*** returning {} as valid".format(h))
+            print(f"*** returning {h} as valid")
         return h
 
     # Using the test function we select those cubics which define S3 extensions over K
@@ -544,9 +643,9 @@ def S3_extensions(K,S, D=None, check_D=True, verbose=False):
     # We check these are valid and define distinct extensions:
     bad_h = [h for h in polys if not h.is_irreducible()]
     if bad_h:
-        print("error in S3_extensions_with_resolvent(), M={}, returning reducible polynomial(s) {}!".format(M, bad_h))
+        print(f"error in S3_extensions_old(), M={M}, returning reducible polynomial(s) {bad_h}!")
     if verbose:
-        print("{} polys (before final test): {}".format(len(polys),polys))
+        print(f"{len(polys)} polys (before final test): {polys}")
 
     # The only remaining check is that the extensions L/K might be ramified at primes above 3 if these are not all in S.
     check_3 = not is_S_unit(K(3),S)
@@ -554,36 +653,16 @@ def S3_extensions(K,S, D=None, check_D=True, verbose=False):
         polys = [h for h in polys if unramified_outside_S(K.extension(h,'t2'),S,3)]
 
     if verbose:
-        print("polys  (after final test, before simplification): {}".format(polys))
+        print("polys  (after final test, before simplification): {polys}")
 
     if K.absolute_degree()<6:
         if verbose:
             print("-- applying pol_simplify...")
         polys = [pol_simplify(f) for f in polys]
         if verbose:
-            print("polys  (after simplification): {}".format(polys))
+            print("polys  (after simplification): {polys}")
     else:
         if verbose:
             print("skipping simplification step as base field has absolute degree>6")
     return polys
-
-############## C3 & S3 extensions ###############################
-
-def C3S3_extensions(K,S, verbose=False):
-    r"""Return all `C_3` and  `S_3` extensions of ``K`` unramified outside ``S``.
-
-    INPUT:
-
-    - ``K`` (number field) -- a number field, or ``QQ``.
-
-    - ``S`` (list) -- a list of prime ideals in ``K``, or primes.
-
-    - ``verbose`` (boolean, default ``False``) -- verbosity flag.
-
-    OUTPUT:
-
-    (list) A list of monic polynomials of degree 3 in `K[x]` defining
-    all Galois or non-Galois cubic extensions of `K` unramified outside `S`.
-    """
-    return C3_extensions(K,S, verbose=verbose) + S3_extensions(K,S, verbose=verbose)
 
