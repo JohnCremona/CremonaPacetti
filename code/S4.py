@@ -170,8 +170,8 @@ def C2_plus_extensions(K,S, D=None, check_D=True, verbose=False):
     x = Kx.gen()
 
     if not D:
-        return [pol_simplify(f*f(x+1)) for f in C2_extensions(K,S)]
-        
+        return [f*f(x+1) for f in C2_extensions(K,S)]
+
     D = K(D)
     f = Kx([-D,0,1])
     if check_D:
@@ -417,11 +417,15 @@ def A4S4_extensions(K,S, M=None, D=None, check_M=True, check_D=True, verbose=Fal
         if D:
             mess += f" with discriminant {D}"
         if M:
-            mess += f" with cubic resolvent {M.defining_polynomial()}"
+            try:
+                pol = M.defining_polynomial()
+            except AttributeError:
+                pol = M
+            mess += f" with cubic resolvent {pol}"
         print(mess)
     if not M:
         if D:
-            if check_D:
+            if check_D and not D.is_square():
                 K2 = K.extension(Kx([-D,0,1]), 't1')
                 if not unramified_outside_S(K2, S):
                     raise ValueError("invalid discriminant D={} (quadratic not unramified outside {})".format(D, S))
@@ -523,7 +527,7 @@ def A4S4_extensions(K,S, M=None, D=None, check_M=True, check_D=True, verbose=Fal
     nq2 = len(quartics)
     if verbose:
         print("after  testing for repeats we have {} {} quartics".format(nq2, name))
-    if nq1!=nq2:
+    if verbose and nq1!=nq2:
         print("repeats detected in {}_extensions_with_resolvent(): {} reduced to {}".format(name, nq1,nq2))
         print("K = {}".format(K))
         print("S = {}".format(S))

@@ -318,7 +318,7 @@ def check1form(data, verbose=False):
     if verbose:
         print(f"character = {data['chi']}")
         print(f"discriminant = {D}" + (" (cyclotomic)" if D==-3 else ""))
-        det_char = data['det_char']
+    det_char = data['det_char']
 
     # Since these are odd representations, the discriminant will
     # always be negative, and in particular not 1:

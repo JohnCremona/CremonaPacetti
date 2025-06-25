@@ -66,6 +66,8 @@ def pol_simplify(f, use_polredabs=False, debug=False):
     (repeatedly until it stabilises), which is faster, otherwise
     pari's polredabs is used.
     """
+    if not f.is_irreducible():
+        return f
     K = f.base_ring()
     g = rescale(f)
     if K==QQ:
